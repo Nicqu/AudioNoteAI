@@ -7,24 +7,28 @@ export const handler: S3Handler = async (event: S3Event) => {
   for (const record of event.Records) {
     const bucket = record.s3.bucket.name;
     const key = decodeURIComponent(record.s3.object.key.replace(/\+/g, " "));
-    const newKey = key.replace(/\.[^/.]+$/, ".txt");
+
+    // Ensure the file is in the 'audioFiles' directory
+    if (!key.startsWith("audioFiles/")) {
+      console.log(`Skipping file ${key} as it's not in the 'audioFiles' directory.`);
+      continue;
+    }
+
+    // Replace 'audioFiles/' with 'transcriptionFiles/' and change the extension to '.txt'
+    const newKey = key.replace("audioFiles/", "transcriptionFiles/").replace(/\.[^.]+$/, ".txt");
 
     try {
       const params = {
         Bucket: bucket,
-        CopySource: `${bucket}/${key}`,
         Key: newKey,
+        Body: `${Date.now()}`,
       };
 
-      await s3.copyObject(params).promise();
+      await s3.putObject(params).promise();
 
-      if (newKey !== key) {
-        await s3.deleteObject({ Bucket: bucket, Key: key }).promise();
-      }
-
-      console.log(`Successfully renamed ${key} to ${newKey}`);
+      console.log(`Successfully created ${newKey} with timestamp`);
     } catch (error) {
-      console.log(`Error renaming file ${key}:`, error);
+      console.log(`Error creating file ${newKey}:`, error);
       throw error;
     }
   }
