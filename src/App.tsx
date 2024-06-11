@@ -5,6 +5,7 @@ import { generateClient } from "aws-amplify/data";
 import "@aws-amplify/ui-react/styles.css";
 import { uploadData, downloadData, remove } from "aws-amplify/storage";
 import { v4 as uuidv4 } from "uuid";
+import { FaSignOutAlt, FaClipboard } from "react-icons/fa";
 
 const client = generateClient<Schema>();
 
@@ -173,9 +174,14 @@ function App() {
     <Authenticator>
       {({ signOut, user }) => (
         <main>
-          <h1>{user?.signInDetails?.loginId}'s Transcriptions</h1>
+          <div className="header">
+            <h1>{user?.signInDetails?.loginId}'s Transcriptions</h1>
+            <button onClick={signOut} className="signout-button" title="Sign out">
+              <FaSignOutAlt />
+            </button>
+          </div>
           <div className="upload-section">
-            <input type="file" onChange={handleChange} />
+            <input type="file" accept="audio/*" onChange={handleChange} />
             <button onClick={uploadFile} disabled={isUploading}>
               Upload
             </button>
@@ -195,12 +201,13 @@ function App() {
           </ul>
           <div>
             <h2>Transcription:</h2>
-            <button onClick={() => navigator.clipboard.writeText(transcription)}>Copy to clipboard</button>
-            <textarea value={transcription} readOnly rows={10} className="transcription-textarea" />
+            <div className="transcription-container">
+              <textarea value={transcription} readOnly rows={10} className="transcription-textarea" />
+              <button onClick={() => navigator.clipboard.writeText(transcription)} className="copy-button" title="Copy to clipboard">
+                <FaClipboard />
+              </button>
+            </div>
           </div>
-          <button onClick={signOut} className="signout-button">
-            Sign out
-          </button>
         </main>
       )}
     </Authenticator>

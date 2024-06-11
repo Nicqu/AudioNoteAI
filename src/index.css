@@ -3,7 +3,7 @@ body {
   background: linear-gradient(180deg, rgb(117, 81, 194), rgb(255, 255, 255));
   display: flex;
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  height: 100vh;
+  min-height: 100vh;
   width: 100vw;
   justify-content: center;
   align-items: center;
@@ -19,6 +19,20 @@ main {
   width: 100%;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 8px;
+  overflow-y: auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  word-break: break-word;
+}
+
+h1 {
+  flex: 1;
+  margin: 0;
 }
 
 .upload-section {
@@ -26,6 +40,17 @@ main {
   flex-direction: column;
   gap: 10px;
   margin-bottom: 20px;
+}
+
+.upload-label {
+  padding: 10px;
+  background-color: #1a1a1a;
+  color: white;
+  text-align: center;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: 500;
 }
 
 button {
@@ -91,6 +116,12 @@ li:hover {
   color: red;
 }
 
+.transcription-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .transcription-textarea {
   width: 100%;
   white-space: pre-wrap;
@@ -98,10 +129,32 @@ li:hover {
   padding: 10px;
   border-radius: 8px;
   border: 1px solid #ccc;
+  flex: 1;
+}
+
+.copy-button {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5em;
+  color: #1a1a1a;
+}
+.copy-button:hover {
+  color: #646cff;
 }
 
 .signout-button {
-  margin-top: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5em;
+  color: #1a1a1a;
+}
+.signout-button:hover {
+  color: #646cff;
 }
 
 /* Mobile Responsiveness */
@@ -138,5 +191,11 @@ li:hover {
 
   main {
     padding: 15px;
+  }
+
+  .copy-button {
+    right: 10px;
+    top: 10px;
+    font-size: 1.2em;
   }
 }
