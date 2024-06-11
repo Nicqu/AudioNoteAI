@@ -23,11 +23,17 @@ function App() {
   useEffect(() => {
     const fetchJobs = async () => {
       const { data } = await client.models.Job.list();
-      setJobs(data);
-      await checkJobStatuses(data);
+      const formattedJobs: Job[] = data.map((job) => ({
+        id: job.id!,
+        fileName: job.fileName!,
+        status: job.status!,
+      }));
+      setJobs(formattedJobs);
+      await checkJobStatuses(formattedJobs);
     };
 
     fetchJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkJobStatuses = async (jobs: Job[]) => {
