@@ -181,7 +181,7 @@ function App() {
             </button>
           </div>
           <div className="upload-section">
-            <input type="file" accept="audio/*" onChange={handleChange} />
+            <input id="audio-upload" type="file" accept="audio/*" capture="microphone" onChange={handleChange} />
             <button onClick={uploadFile} disabled={isUploading}>
               Upload
             </button>
