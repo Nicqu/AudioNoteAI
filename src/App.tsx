@@ -67,7 +67,6 @@ function App() {
 
         await uploadData({
           path: ({ identityId }) => `audioFiles/${identityId}/${file.name}`,
-          //path: `audioFiles/${jobId}_${file.name}`,
           data: file,
           options: { metadata: { jobid: jobId, transcriptionkey: `transcriptionFiles/${jobId}.json` } },
         }).result;
@@ -155,23 +154,16 @@ function App() {
   };
 
   const deleteJob = async (jobId: string, fileName: string) => {
-    const audioKey = `audioFiles/${fileName}`;
-    const transcriptionKey = `transcriptionFiles/${jobId}.json`;
-
     try {
       // Delete job from database
       await client.models.Job.delete({ id: jobId });
-      console.log(`Deleted job ${jobId}`);
-
       setJobs((prevJobs) => prevJobs.filter((job) => job.id !== jobId));
 
       // Delete audio file
-      await remove({ path: audioKey });
-      console.log(`Deleted ${audioKey}`);
+      await remove({ path: ({ identityId }) => `audioFiles/${identityId}/${fileName}` });
 
       // Delete transcription file
-      await remove({ path: transcriptionKey });
-      console.log(`Deleted ${transcriptionKey}`);
+      await remove({ path: `transcriptionFiles/${jobId}.json` });
     } catch (error) {
       console.log(`Error deleting job ${jobId}:`, error);
     }
@@ -183,7 +175,7 @@ function App() {
         <main>
           <h1>{user?.signInDetails?.loginId}'s Transcriptions</h1>
           <div className="upload-section">
-            <input type="file" accept="audio/*" onChange={handleChange} />
+            <input type="file" onChange={handleChange} />
             <button onClick={uploadFile} disabled={isUploading}>
               Upload
             </button>
