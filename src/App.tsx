@@ -60,7 +60,8 @@ function App() {
         setJobs((prevJobs) => [...prevJobs, newJob]);
 
         await uploadData({
-          path: `audioFiles/${file.name}`,
+          path: ({ identityId }) => `audioFiles/${identityId}/${file.name}`,
+          //path: `audioFiles/${jobId}_${file.name}`,
           data: file,
           options: { metadata: { jobid: jobId, transcriptionkey: `transcriptionFiles/${jobId}.json` } },
         }).result;
@@ -181,20 +182,21 @@ function App() {
               Upload
             </button>
           </div>
+          <h2>Transcription Jobs:</h2>
           <ul>
             {jobs.map((job) => (
-              <li key={job.id}>
-                <span onClick={() => handleJobClick(job.id)}>
+              <li key={job.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span onClick={() => handleJobClick(job.id)} style={{ flex: 1 }}>
                   {job.fileName} - {job.status}
                 </span>
                 <button onClick={() => deleteJob(job.id, job.fileName)} style={{ marginLeft: "10px", color: "red" }}>
-                  Delete
+                  &#x1f5d1; {/* Unicode for the delete/trash icon */}
                 </button>
               </li>
             ))}
           </ul>
           <div>
-            <h2>Transcription Content:</h2>
+            <h2>Transcription:</h2>
             <button onClick={() => navigator.clipboard.writeText(transcription)}>Copy to clipboard</button>
             <textarea value={transcription} readOnly rows={10} style={{ width: "100%", whiteSpace: "pre-wrap" }} />
           </div>
