@@ -53,6 +53,7 @@ function App() {
           language: "de-DE", // Specify the language code here
         },
       });
+      console.log("Transcription Result2: ", result);
       console.log("Transcription Result: ", result.transcription.fullText);
       setTranscription(result.transcription.fullText);
       setIsLoading(false);
