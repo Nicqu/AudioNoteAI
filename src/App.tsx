@@ -3,7 +3,7 @@ import { Authenticator } from "@aws-amplify/ui-react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import "@aws-amplify/ui-react/styles.css";
-import { uploadData, downloadData } from "aws-amplify/storage";
+import { uploadData, downloadData, remove } from "aws-amplify/storage";
 import { v4 as uuidv4 } from "uuid";
 
 const client = generateClient<Schema>();
@@ -55,13 +55,11 @@ function App() {
       setTranscription("");
       try {
         const jobId = uuidv4();
-        //const jobId = "nico";
         const newJob = { id: jobId, fileName: file.name, status: "Uploading" };
         await client.models.Job.create(newJob);
         setJobs((prevJobs) => [...prevJobs, newJob]);
 
         await uploadData({
-          //path: ({ identityId }) => `audioFiles/${identityId}/${file.name}`,
           path: `audioFiles/${file.name}`,
           data: file,
           options: { metadata: { jobid: jobId, transcriptionkey: `transcriptionFiles/${jobId}.json` } },
@@ -149,6 +147,29 @@ function App() {
     }
   };
 
+  const deleteJob = async (jobId: string, fileName: string) => {
+    const audioKey = `audioFiles/${fileName}`;
+    const transcriptionKey = `transcriptionFiles/${jobId}.json`;
+
+    try {
+      // Delete audio file
+      await remove({ path: audioKey });
+      console.log(`Deleted ${audioKey}`);
+
+      // Delete transcription file
+      await remove({ path: transcriptionKey });
+      console.log(`Deleted ${transcriptionKey}`);
+
+      // Delete job from database
+      await client.models.Job.delete({ id: jobId });
+      console.log(`Deleted job ${jobId}`);
+
+      setJobs((prevJobs) => prevJobs.filter((job) => job.id !== jobId));
+    } catch (error) {
+      console.log(`Error deleting job ${jobId}:`, error);
+    }
+  };
+
   return (
     <Authenticator>
       {({ signOut, user }) => (
@@ -162,8 +183,13 @@ function App() {
           </div>
           <ul>
             {jobs.map((job) => (
-              <li key={job.id} onClick={() => handleJobClick(job.id)}>
-                {job.fileName} - {job.status}
+              <li key={job.id}>
+                <span onClick={() => handleJobClick(job.id)}>
+                  {job.fileName} - {job.status}
+                </span>
+                <button onClick={() => deleteJob(job.id, job.fileName)} style={{ marginLeft: "10px", color: "red" }}>
+                  Delete
+                </button>
               </li>
             ))}
           </ul>

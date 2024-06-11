@@ -10,7 +10,7 @@ export const storage = defineStorage({
   access: (allow) => ({
     "audioFiles/*": [
       allow.authenticated.to(["read", "write", "delete"]),
-      allow.guest.to(["read", "write", "delete"]),
+      //allow.guest.to(["read", "write", "delete"]),
       allow.resource(whisperTranscribe).to(["read", "write"]),
     ],
     // "audioFiles/{entity_id}/*": [
@@ -20,7 +20,7 @@ export const storage = defineStorage({
     // ],
     "transcriptionFiles/*": [
       allow.authenticated.to(["read", "write", "delete"]),
-      allow.guest.to(["read", "write", "delete"]),
+      //allow.guest.to(["read", "write", "delete"]),
       allow.resource(whisperTranscribe).to(["read", "write"]),
     ],
   }),
