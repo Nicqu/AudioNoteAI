@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Authenticator } from "@aws-amplify/ui-react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
@@ -7,8 +7,6 @@ import { uploadData, downloadData } from "aws-amplify/storage";
 import { v4 as uuidv4 } from "uuid";
 
 const client = generateClient<Schema>();
-// const { data: jobs } = await client.models.Job.list();
-// console.log(jobs);
 
 type Job = {
   id: string;
@@ -21,6 +19,15 @@ function App() {
   const [file, setFile] = useState<File | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [transcription, setTranscription] = useState("");
+
+  useEffect(() => {
+    const fetchJobs = async () => {
+      const { data } = await client.models.Job.list();
+      setJobs(data);
+    };
+
+    fetchJobs();
+  }, []);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
@@ -49,13 +56,26 @@ function App() {
       try {
         const newFileName = generateFileName(file);
         const jobId = uuidv4();
-        setJobs((prevJobs) => [...prevJobs, { id: jobId, fileName: newFileName, status: "Uploading" }]);
+        const newJob = { id: jobId, fileName: newFileName, status: "Uploading" };
+
+        await client.models.Job.create(newJob);
+
+        setJobs((prevJobs) => [...prevJobs, newJob]);
+
         await uploadData({
           path: `audioFiles/${newFileName}`,
           data: file,
         }).result;
+
         console.log("Upload Succeeded");
+
+        await client.models.Job.update({
+          id: jobId,
+          status: "Processing",
+        });
+
         setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId ? { ...job, status: "Processing" } : job)));
+
         await pollTranscription(newFileName, jobId);
       } catch (error) {
         console.log("Upload Error: ", error);
@@ -87,18 +107,28 @@ function App() {
           const transcript = (data.results.transcripts as Array<{ transcript: string }>).map((t) => t.transcript).join(" ");
           setTranscription(transcript);
           success = true;
+
+          await client.models.Job.update({
+            id: jobId,
+            status: "Completed",
+          });
+
           setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId ? { ...job, status: "Completed" } : job)));
-          createJob({ id: jobId, fileName, status: "Completed" });
+
           console.log("Download Succeeded: ", transcriptionKey);
         }
       } catch (error) {
         console.log(`Attempt ${attempts} failed: `, error);
-        createJob({ id: jobId, fileName, status: error.message });
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
 
     if (!success) {
+      await client.models.Job.update({
+        id: jobId,
+        status: "Failed",
+      });
+
       setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId ? { ...job, status: "Failed" } : job)));
       console.log("Failed to retrieve transcription after maximum attempts.");
     }
@@ -125,15 +155,6 @@ function App() {
     }
     setIsLoading(false);
   };
-
-  function createJob(job: Job) {
-    client.models.Job.create({ id: job.id, fileName: job.fileName, status: job.status });
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  function deleteJob(id: string) {
-    client.models.Job.delete({ id });
-  }
 
   return (
     <Authenticator>
