@@ -3,7 +3,8 @@ import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import { Authenticator } from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
-import { uploadData, downloadData } from "aws-amplify/storage";
+import { uploadData } from "aws-amplify/storage";
+import { Predictions } from "@aws-amplify/predictions";
 
 const client = generateClient<Schema>();
 
@@ -35,33 +36,30 @@ function App() {
           data: file,
         }).result;
         console.log("Upload Succeeded: ", result);
-        downloadFile(file.name);
+        startTranscription(file);
       } catch (error) {
-        console.log("Upload Error : ", error);
+        console.log("Upload Error: ", error);
       }
     }
   };
 
-  const downloadFile = async (fileName: string) => {
-    const intervalId = setInterval(async () => {
-      if (fileName) {
-        try {
-          const transcriptionFileKey = `transcriptionFiles/${fileName.replace(/\.[^/.]+$/, "")}.txt`;
-          const downloadResult = await downloadData({
-            path: transcriptionFileKey,
-          }).result;
-          const text = await downloadResult.body.text();
-          // Alternatively, you can use `downloadResult.body.blob()`
-          // or `downloadResult.body.json()` get read body in Blob or JSON format.
-          console.log("Download Succeed: ", text);
-          setTranscription(text);
-          clearInterval(intervalId);
-          setIsLoading(false);
-        } catch (error) {
-          console.log("Download Error : ", error);
-        }
-      }
-    }, 5000); // Check every 5 seconds
+  const startTranscription = async (file: File) => {
+    try {
+      const result = await Predictions.convert({
+        transcription: {
+          source: {
+            bytes: await file.arrayBuffer(),
+          },
+          language: "de-DE", // Specify the language code here
+        },
+      });
+      console.log("Transcription Result: ", result.transcription.fullText);
+      setTranscription(result.transcription.fullText);
+      setIsLoading(false);
+    } catch (error) {
+      console.log("Transcription Error: ", error);
+      setIsLoading(false);
+    }
   };
 
   function createTodo() {
