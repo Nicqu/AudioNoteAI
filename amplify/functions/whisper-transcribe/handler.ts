@@ -14,8 +14,18 @@ export const handler: S3Handler = async (event: S3Event) => {
       continue;
     }
 
+    // Extract the base filename without extension
+    const baseFileName = key
+      .split("/")
+      .pop()
+      ?.replace(/\.[^.]+$/, "");
+    if (!baseFileName) {
+      console.log(`Invalid file key: ${key}`);
+      continue;
+    }
+
     // Define the transcription job name and output key
-    const jobName = `transcription-${Date.now()}`;
+    const jobName = `transcription-${baseFileName}-${Date.now()}`;
     const outputKey = key.replace("audioFiles/", "transcriptionFiles/").replace(/\.[^.]+$/, ".json");
 
     const params: AWS.TranscribeService.StartTranscriptionJobRequest = {

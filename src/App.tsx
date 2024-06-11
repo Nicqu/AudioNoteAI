@@ -3,8 +3,7 @@ import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import { Authenticator } from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
-import { uploadData } from "aws-amplify/storage";
-import { Predictions } from "@aws-amplify/predictions";
+import { uploadData, downloadData } from "aws-amplify/storage";
 
 const client = generateClient<Schema>();
 
@@ -26,41 +25,64 @@ function App() {
     }
   };
 
+  const sanitizeFileName = (fileName: string): string => {
+    // Replace invalid characters with underscores
+    return fileName.replace(/[^a-zA-Z0-9-_.!*'()/]/g, "_");
+  };
+
   const uploadFile = async () => {
     if (file) {
       setIsLoading(true);
       setTranscription("");
       try {
-        const result = await uploadData({
-          path: `audioFiles/${file.name}`,
-          data: file,
-        }).result;
-        console.log("Upload Succeeded: ", result);
-        startTranscription(file);
+        const sanitizedFileName = sanitizeFileName(file.name);
+        // await uploadData({
+        //   path: `audioFiles/${sanitizedFileName}`,
+        //   data: file,
+        // }).result;
+        console.log("Upload Succeeded");
+        await pollTranscription(sanitizedFileName);
       } catch (error) {
         console.log("Upload Error: ", error);
+        setIsLoading(false);
       }
     }
   };
+  const pollTranscription = async (fileName: string) => {
+    const transcriptionFileName = fileName.replace(/\.[^.]+$/, ".json");
+    const transcriptionKey = `transcriptionFiles/${transcriptionFileName}`;
+    console.log("transcriptionKey: ", transcriptionKey);
 
-  const startTranscription = async (file: File) => {
-    try {
-      const result = await Predictions.convert({
-        transcription: {
-          source: {
-            bytes: await file.arrayBuffer(),
-          },
-          language: "de-DE", // Specify the language code here
-        },
-      });
-      console.log("Transcription Result2: ", result);
-      console.log("Transcription Result: ", result.transcription.fullText);
-      setTranscription(result.transcription.fullText);
-      setIsLoading(false);
-    } catch (error) {
-      console.log("Transcription Error: ", error);
-      setIsLoading(false);
+    const maxAttempts = 50;
+    const delay = 15000; // 15 seconds delay between attempts
+    let attempts = 0;
+    let success = false;
+
+    while (attempts < maxAttempts && !success) {
+      try {
+        attempts++;
+        const downloadResult = await downloadData({
+          path: transcriptionKey,
+        }).result;
+        if (downloadResult) {
+          console.log("Result: ", downloadResult);
+          const json = await downloadResult.body.text();
+          const data = JSON.parse(json);
+          const transcript = (data.results.transcripts as Array<{ transcript: string }>).map((t) => t.transcript).join(" ");
+          setTranscription(transcript);
+          success = true;
+          console.log("Download Succeeded: ", transcriptionKey);
+        }
+      } catch (error) {
+        console.log(`Attempt ${attempts} failed: `, error);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
     }
+
+    if (!success) {
+      console.log("Failed to retrieve transcription after maximum attempts.");
+    }
+    setIsLoading(false);
   };
 
   function createTodo() {
@@ -75,7 +97,7 @@ function App() {
     <Authenticator>
       {({ signOut, user }) => (
         <main>
-          <h1>{user?.username}'s todos</h1>
+          <h1>{user?.username}'s Transcriptions</h1>
           <button onClick={createTodo}>+ new</button>
           <ul>
             {todos.map((todo) => (
@@ -88,11 +110,11 @@ function App() {
             <input type="file" onChange={handleChange} />
             <button onClick={uploadFile}>Upload</button>
             {isLoading ? (
-              <div>Loading...</div> // Replace this with your loading bar
+              <div>Loading...</div>
             ) : (
               <div>
                 <h2>Transcription Content:</h2>
-                <pre>{transcription}</pre>
+                <textarea value={transcription} readOnly rows={10} style={{ width: "100%", whiteSpace: "pre-wrap" }} />
               </div>
             )}
           </div>
