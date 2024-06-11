@@ -17,7 +17,6 @@ type Job = {
 function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [file, setFile] = useState<File | undefined>();
-  const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [transcription, setTranscription] = useState("");
 
@@ -34,7 +33,7 @@ function App() {
   const checkJobStatuses = async (jobs: Job[]) => {
     for (const job of jobs) {
       if (job.status === "Processing") {
-        await pollTranscription(job.fileName, job.id);
+        await pollTranscription(job.id);
       }
     }
   };
@@ -50,56 +49,42 @@ function App() {
     }
   };
 
-  const generateFileName = (file: File): string => {
-    // const fileExtension = file.name.split(".").pop();
-    // const uuid = uuidv4();
-    // return `${uuid}.${fileExtension}`;
-    //const timestamp = new Date().getTime();
-    //return `${timestamp}_${file.name.replace(/[^a-zA-Z0-9-_.!*'()/]/g, "_")}`;
-    return `${file.name.replace(/[^a-zA-Z0-9-_.!*'()/]/g, "_")}`;
-  };
-
   const uploadFile = async () => {
     if (file) {
-      setIsLoading(true);
       setIsUploading(true);
       setTranscription("");
       try {
-        const newFileName = generateFileName(file);
         const jobId = uuidv4();
-        const newJob = { id: jobId, fileName: newFileName, status: "Uploading" };
-
+        //const jobId = "nico";
+        const newJob = { id: jobId, fileName: file.name, status: "Uploading" };
         await client.models.Job.create(newJob);
-
         setJobs((prevJobs) => [...prevJobs, newJob]);
 
         await uploadData({
-          path: `audioFiles/${newFileName}`,
+          //path: ({ identityId }) => `audioFiles/${identityId}/${file.name}`,
+          path: `audioFiles/${file.name}`,
           data: file,
+          options: { metadata: { jobid: jobId, transcriptionkey: `transcriptionFiles/${jobId}.json` } },
         }).result;
-
         console.log("Upload Succeeded");
 
         await client.models.Job.update({
           id: jobId,
           status: "Processing",
         });
-
         setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId ? { ...job, status: "Processing" } : job)));
 
-        await pollTranscription(newFileName, jobId);
+        await pollTranscription(jobId);
       } catch (error) {
         console.log("Upload Error: ", error);
-        setIsLoading(false);
       }
       setIsUploading(false);
     }
   };
 
-  const pollTranscription = async (fileName: string, jobId: string) => {
-    const transcriptionFileName = fileName.replace(/\.[^.]+$/, ".json");
-    const transcriptionKey = `transcriptionFiles/${transcriptionFileName}`;
-    // console.log("transcriptionKey: ", transcriptionKey);
+  const pollTranscription = async (jobId: string) => {
+    const transcriptionKey = `transcriptionFiles/${jobId}.json`;
+    console.log("transcriptionKey: ", transcriptionKey);
 
     const maxAttempts = 50;
     const delay = 15000; // 15 seconds delay between attempts
@@ -110,7 +95,6 @@ function App() {
       try {
         attempts++;
         const downloadResult = await downloadData({
-          //path: ({ identityId }) => `transcriptionFiles/${transcriptionFileName}`,
           path: transcriptionKey,
         }).result;
         if (downloadResult) {
@@ -145,13 +129,10 @@ function App() {
       setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId ? { ...job, status: "Failed" } : job)));
       console.log("Failed to retrieve transcription after maximum attempts.");
     }
-    setIsLoading(false);
   };
 
-  const handleJobClick = async (fileName: string) => {
-    setIsLoading(true);
-    const transcriptionFileName = fileName.replace(/\.[^.]+$/, ".json");
-    const transcriptionKey = `transcriptionFiles/${transcriptionFileName}`;
+  const handleJobClick = async (jobId: string) => {
+    const transcriptionKey = `transcriptionFiles/${jobId}.json`;
     try {
       const downloadResult = await downloadData({
         path: transcriptionKey,
@@ -166,7 +147,6 @@ function App() {
     } catch (error) {
       console.log("Error retrieving transcription: ", error);
     }
-    setIsLoading(false);
   };
 
   return (
@@ -182,7 +162,7 @@ function App() {
           </div>
           <ul>
             {jobs.map((job) => (
-              <li key={job.id} onClick={() => handleJobClick(job.fileName)}>
+              <li key={job.id} onClick={() => handleJobClick(job.id)}>
                 {job.fileName} - {job.status}
               </li>
             ))}

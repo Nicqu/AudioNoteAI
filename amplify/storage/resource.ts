@@ -8,8 +8,21 @@ const whisperTranscribe = defineFunction({
 export const storage = defineStorage({
   name: "storage",
   access: (allow) => ({
-    "audioFiles/*": [allow.authenticated.to(["read", "write"]), allow.resource(whisperTranscribe).to(["read", "write", "delete"])],
-    "transcriptionFiles/*": [allow.authenticated.to(["read", "write"]), allow.resource(whisperTranscribe).to(["read", "write", "delete"])],
+    "audioFiles/*": [
+      allow.authenticated.to(["read", "write", "delete"]),
+      allow.guest.to(["read", "write", "delete"]),
+      allow.resource(whisperTranscribe).to(["read", "write"]),
+    ],
+    // "audioFiles/{entity_id}/*": [
+    //   allow.entity("identity").to(["read", "write", "delete"]),
+    //   allow.authenticated.to(["read", "write", "delete"]),
+    //   allow.resource(whisperTranscribe).to(["read"]),
+    // ],
+    "transcriptionFiles/*": [
+      allow.authenticated.to(["read", "write", "delete"]),
+      allow.guest.to(["read", "write", "delete"]),
+      allow.resource(whisperTranscribe).to(["read", "write"]),
+    ],
   }),
   triggers: {
     onUpload: whisperTranscribe,
