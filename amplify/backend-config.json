@@ -1,0 +1,21 @@
+{
+    "storage": {
+        "customStorage": {
+            "service": "S3",
+            "providerPlugin": "awscloudformation",
+            "dependsOn": []
+        }
+    },
+    "function": {
+        "WhisperServiceLambda": {
+            "service": "Lambda",
+            "providerPlugin": "awscloudformation",
+            "build": true
+        },
+        "S3TriggeredLambda": {
+            "service": "Lambda",
+            "providerPlugin": "awscloudformation",
+            "build": true
+        }
+    }
+}
