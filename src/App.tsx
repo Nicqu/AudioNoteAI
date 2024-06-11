@@ -4,6 +4,7 @@ import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import "@aws-amplify/ui-react/styles.css";
 import { uploadData, downloadData, remove } from "aws-amplify/storage";
+import { StorageManager } from "@aws-amplify/ui-react-storage";
 import { v4 as uuidv4 } from "uuid";
 import { FaSignOutAlt, FaClipboard } from "react-icons/fa";
 
@@ -181,10 +182,11 @@ function App() {
             </button>
           </div>
           <div className="upload-section">
-            <input id="audio-upload" type="file" accept="audio/*" capture="microphone" onChange={handleChange} />
+            <input id="audio-upload" type="file" accept="audio/*" onChange={handleChange} />
             <button onClick={uploadFile} disabled={isUploading}>
               Upload
             </button>
+            <StorageManager acceptedFileTypes={["image/*"]} path={({ identityId }) => `audioFiles/${identityId}/`} maxFileCount={1} isResumable />
           </div>
           <h2>Transcription Jobs:</h2>
           <ul>
