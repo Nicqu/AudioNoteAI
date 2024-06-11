@@ -159,6 +159,12 @@ function App() {
     const transcriptionKey = `transcriptionFiles/${jobId}.json`;
 
     try {
+      // Delete job from database
+      await client.models.Job.delete({ id: jobId });
+      console.log(`Deleted job ${jobId}`);
+
+      setJobs((prevJobs) => prevJobs.filter((job) => job.id !== jobId));
+
       // Delete audio file
       await remove({ path: audioKey });
       console.log(`Deleted ${audioKey}`);
@@ -166,12 +172,6 @@ function App() {
       // Delete transcription file
       await remove({ path: transcriptionKey });
       console.log(`Deleted ${transcriptionKey}`);
-
-      // Delete job from database
-      await client.models.Job.delete({ id: jobId });
-      console.log(`Deleted job ${jobId}`);
-
-      setJobs((prevJobs) => prevJobs.filter((job) => job.id !== jobId));
     } catch (error) {
       console.log(`Error deleting job ${jobId}:`, error);
     }
@@ -182,7 +182,7 @@ function App() {
       {({ signOut, user }) => (
         <main>
           <h1>{user?.signInDetails?.loginId}'s Transcriptions</h1>
-          <div>
+          <div className="upload-section">
             <input type="file" accept="audio/*" onChange={handleChange} />
             <button onClick={uploadFile} disabled={isUploading}>
               Upload
@@ -191,12 +191,12 @@ function App() {
           <h2>Transcription Jobs:</h2>
           <ul>
             {jobs.map((job) => (
-              <li key={job.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span onClick={() => handleJobClick(job.id)} style={{ flex: 1 }}>
+              <li key={job.id} className="job-item">
+                <span onClick={() => handleJobClick(job.id)} className="job-details">
                   {job.fileName} - {job.status}
                 </span>
-                <button onClick={() => deleteJob(job.id, job.fileName)} style={{ marginLeft: "10px", color: "red" }}>
-                  &#x1f5d1; {/* Unicode for the delete/trash icon */}
+                <button onClick={() => deleteJob(job.id, job.fileName)} className="delete-button">
+                  &#x1f5d1;
                 </button>
               </li>
             ))}
@@ -204,9 +204,11 @@ function App() {
           <div>
             <h2>Transcription:</h2>
             <button onClick={() => navigator.clipboard.writeText(transcription)}>Copy to clipboard</button>
-            <textarea value={transcription} readOnly rows={10} style={{ width: "100%", whiteSpace: "pre-wrap" }} />
+            <textarea value={transcription} readOnly rows={10} className="transcription-textarea" />
           </div>
-          <button onClick={signOut}>Sign out</button>
+          <button onClick={signOut} className="signout-button">
+            Sign out
+          </button>
         </main>
       )}
     </Authenticator>

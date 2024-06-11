@@ -1,21 +1,17 @@
-import { defineFunction, defineStorage } from "@aws-amplify/backend";
-
-const whisperTranscribe = defineFunction({
-  name: "whisperTranscribe",
-  entry: "../functions/whisper-transcribe/handler.ts",
-});
+import { defineStorage } from "@aws-amplify/backend";
+import { awsTranscribe } from "../functions/awstranscribe/resource";
 
 export const storage = defineStorage({
   name: "storage",
   access: (allow) => ({
     // "audioFiles/*": [
     //   allow.authenticated.to(["read", "write", "delete"]),
-    //   allow.resource(whisperTranscribe).to(["read", "write"]),
+    //   allow.resource(awsTranscribe).to(["read", "write"]),
     // ],
-    "audioFiles/{entity_id}/*": [allow.entity("identity").to(["read", "write", "delete"]), allow.resource(whisperTranscribe).to(["read", "write"])],
-    "transcriptionFiles/*": [allow.authenticated.to(["read", "write", "delete"]), allow.resource(whisperTranscribe).to(["read", "write"])],
+    "audioFiles/{entity_id}/*": [allow.entity("identity").to(["read", "write", "delete"]), allow.resource(awsTranscribe).to(["read", "write"])],
+    "transcriptionFiles/*": [allow.authenticated.to(["read", "write", "delete"]), allow.resource(awsTranscribe).to(["read", "write"])],
   }),
   triggers: {
-    onUpload: whisperTranscribe,
+    onUpload: awsTranscribe,
   },
 });

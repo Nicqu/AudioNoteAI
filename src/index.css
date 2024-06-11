@@ -13,6 +13,16 @@ main {
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  padding: 20px;
+  box-sizing: border-box;
+  max-width: 100%;
+  width: 100%;
+}
+
+.upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 button {
@@ -36,10 +46,10 @@ button:focus-visible {
 }
 
 button:disabled {
-  background-color: #555555; /* Dark gray background for disabled state */
-  border-color: #555555;     /* Matching border color for disabled state */
-  color: #aaaaaa;            /* Light gray text color for disabled state */
-  cursor: not-allowed;       /* Show not-allowed cursor for disabled state */
+  background-color: #555555;
+  border-color: #555555;
+  color: #aaaaaa;
+  cursor: not-allowed;
 }
 
 ul {
@@ -60,22 +70,52 @@ ul {
 li {
   background-color: white;
   padding: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 li:hover {
   background: #dadbf9;
 }
 
-a {
-  font-weight: 800;
-  text-decoration: none;
+.job-details {
+  flex: 1;
 }
 
-/* Ensure text within <pre> elements is wrapped */
-pre {
-  white-space: pre-wrap;       /* CSS3 */
-  white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
-  white-space: -pre-wrap;      /* Opera 4-6 */
-  white-space: -o-pre-wrap;    /* Opera 7 */
-  word-wrap: break-word;       /* Internet Explorer 5.5+ */
+.delete-button {
+  margin-left: 10px;
+  color: red;
+}
+
+.transcription-textarea {
+  width: 100%;
+  white-space: pre-wrap;
+  resize: none;
+}
+
+.signout-button {
+  margin-top: 20px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 600px) {
+  .upload-section {
+    flex-direction: column;
+  }
+
+  button {
+    font-size: 0.8em;
+    padding: 0.5em 1em;
+  }
+
+  li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .delete-button {
+    margin-top: 10px;
+    margin-left: 0;
+  }
 }
