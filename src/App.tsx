@@ -4,6 +4,7 @@ import { generateClient } from "aws-amplify/data";
 import { Authenticator } from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
 import { uploadData, downloadData } from "aws-amplify/storage";
+import { v4 as uuidv4 } from "uuid";
 
 const client = generateClient<Schema>();
 
@@ -25,9 +26,10 @@ function App() {
     }
   };
 
-  const sanitizeFileName = (fileName: string): string => {
-    // Replace invalid characters with underscores
-    return fileName.replace(/[^a-zA-Z0-9-_.!*'()/]/g, "_");
+  const generateFileName = (file: File): string => {
+    const fileExtension = file.name.split(".").pop();
+    const uuid = uuidv4();
+    return `${uuid}.${fileExtension}`;
   };
 
   const uploadFile = async () => {
@@ -35,19 +37,20 @@ function App() {
       setIsLoading(true);
       setTranscription("");
       try {
-        const sanitizedFileName = sanitizeFileName(file.name);
-        // await uploadData({
-        //   path: `audioFiles/${sanitizedFileName}`,
-        //   data: file,
-        // }).result;
+        const newFileName = generateFileName(file);
+        await uploadData({
+          path: `audioFiles/${newFileName}`,
+          data: file,
+        }).result;
         console.log("Upload Succeeded");
-        await pollTranscription(sanitizedFileName);
+        await pollTranscription(newFileName);
       } catch (error) {
         console.log("Upload Error: ", error);
         setIsLoading(false);
       }
     }
   };
+
   const pollTranscription = async (fileName: string) => {
     const transcriptionFileName = fileName.replace(/\.[^.]+$/, ".json");
     const transcriptionKey = `transcriptionFiles/${transcriptionFileName}`;
@@ -108,12 +111,15 @@ function App() {
           </ul>
           <div>
             <input type="file" onChange={handleChange} />
-            <button onClick={uploadFile}>Upload</button>
+            <button onClick={uploadFile} disabled={isLoading}>
+              Upload
+            </button>
             {isLoading ? (
               <div>Loading...</div>
             ) : (
               <div>
                 <h2>Transcription Content:</h2>
+                <button onClick={() => navigator.clipboard.writeText(transcription)}>Copy to clipboard</button>
                 <textarea value={transcription} readOnly rows={10} style={{ width: "100%", whiteSpace: "pre-wrap" }} />
               </div>
             )}
