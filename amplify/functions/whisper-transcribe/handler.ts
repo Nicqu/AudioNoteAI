@@ -1,7 +1,7 @@
 import { S3Event, S3Handler } from "aws-lambda";
 import * as AWS from "aws-sdk";
 
-const s3 = new AWS.S3();
+const transcribe = new AWS.TranscribeService();
 
 export const handler: S3Handler = async (event: S3Event) => {
   for (const record of event.Records) {
@@ -14,21 +14,26 @@ export const handler: S3Handler = async (event: S3Event) => {
       continue;
     }
 
-    // Replace 'audioFiles/' with 'transcriptionFiles/' and change the extension to '.txt'
-    const newKey = key.replace("audioFiles/", "transcriptionFiles/").replace(/\.[^.]+$/, ".txt");
+    // Define the transcription job name and output key
+    const jobName = `transcription-${Date.now()}`;
+    const outputKey = key.replace("audioFiles/", "transcriptionFiles/").replace(/\.[^.]+$/, ".json");
+
+    const params: AWS.TranscribeService.StartTranscriptionJobRequest = {
+      TranscriptionJobName: jobName,
+      LanguageCode: "de-DE", // Specify the language code here
+      Media: {
+        MediaFileUri: `s3://${bucket}/${key}`,
+      },
+      OutputBucketName: bucket,
+      OutputKey: outputKey,
+      Settings: {},
+    };
 
     try {
-      const params = {
-        Bucket: bucket,
-        Key: newKey,
-        Body: `${Date.now()}`,
-      };
-
-      await s3.putObject(params).promise();
-
-      console.log(`Successfully created ${newKey} with timestamp`);
+      const data = await transcribe.startTranscriptionJob(params).promise();
+      console.log(`Started transcription job for ${key}:`, data);
     } catch (error) {
-      console.log(`Error creating file ${newKey}:`, error);
+      console.log(`Error starting transcription job for ${key}:`, error);
       throw error;
     }
   }
