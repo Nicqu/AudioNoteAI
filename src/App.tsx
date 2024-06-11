@@ -24,10 +24,19 @@ function App() {
     const fetchJobs = async () => {
       const { data } = await client.models.Job.list();
       setJobs(data);
+      await checkJobStatuses(data);
     };
 
     fetchJobs();
   }, []);
+
+  const checkJobStatuses = async (jobs: Job[]) => {
+    for (const job of jobs) {
+      if (job.status === "Processing") {
+        await pollTranscription(job.fileName, job.id);
+      }
+    }
+  };
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files.length > 0) {
