@@ -186,7 +186,7 @@ function App() {
             <button onClick={uploadFile} disabled={isUploading}>
               Upload
             </button>
-            <StorageManager acceptedFileTypes={["image/*"]} path={({ identityId }) => `audioFiles/${identityId}/`} maxFileCount={1} isResumable />
+            <StorageManager acceptedFileTypes={["audio/*"]} path={({ identityId }) => `audioFiles/${identityId}/`} maxFileCount={1} isResumable />
           </div>
           <h2>Transcription Jobs:</h2>
           <ul>
