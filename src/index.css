@@ -35,6 +35,13 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+button:disabled {
+  background-color: #555555; /* Dark gray background for disabled state */
+  border-color: #555555;     /* Matching border color for disabled state */
+  color: #aaaaaa;            /* Light gray text color for disabled state */
+  cursor: not-allowed;       /* Show not-allowed cursor for disabled state */
+}
+
 ul {
   padding-inline-start: 0;
   margin-block-start: 0;

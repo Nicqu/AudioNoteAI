@@ -18,6 +18,7 @@ function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [file, setFile] = useState<File | undefined>();
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [transcription, setTranscription] = useState("");
 
   useEffect(() => {
@@ -61,6 +62,7 @@ function App() {
   const uploadFile = async () => {
     if (file) {
       setIsLoading(true);
+      setIsUploading(true);
       setTranscription("");
       try {
         const newFileName = generateFileName(file);
@@ -90,13 +92,14 @@ function App() {
         console.log("Upload Error: ", error);
         setIsLoading(false);
       }
+      setIsUploading(false);
     }
   };
 
   const pollTranscription = async (fileName: string, jobId: string) => {
     const transcriptionFileName = fileName.replace(/\.[^.]+$/, ".json");
     const transcriptionKey = `transcriptionFiles/${transcriptionFileName}`;
-    console.log("transcriptionKey: ", transcriptionKey);
+    // console.log("transcriptionKey: ", transcriptionKey);
 
     const maxAttempts = 50;
     const delay = 15000; // 15 seconds delay between attempts
@@ -107,6 +110,7 @@ function App() {
       try {
         attempts++;
         const downloadResult = await downloadData({
+          //path: ({ identityId }) => `transcriptionFiles/${transcriptionFileName}`,
           path: transcriptionKey,
         }).result;
         if (downloadResult) {
@@ -169,10 +173,10 @@ function App() {
     <Authenticator>
       {({ signOut, user }) => (
         <main>
-          <h1>{user?.username}'s Transcriptions</h1>
+          <h1>{user?.signInDetails?.loginId}'s Transcriptions</h1>
           <div>
             <input type="file" accept="audio/*" onChange={handleChange} />
-            <button onClick={uploadFile} disabled={isLoading}>
+            <button onClick={uploadFile} disabled={isUploading}>
               Upload
             </button>
           </div>
