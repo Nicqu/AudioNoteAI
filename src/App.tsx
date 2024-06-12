@@ -214,6 +214,9 @@ function App() {
             </div>
             <textarea value={transcription} readOnly rows={10} className="transcription-textarea" />
           </div>
+          <footer className="footer">
+            <p>Made for 🍹</p>
+          </footer>
         </main>
       )}
     </Authenticator>
