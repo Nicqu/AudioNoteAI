@@ -72,6 +72,7 @@ function App() {
           options: { metadata: { jobid: jobId, transcriptionkey: `transcriptionFiles/${jobId}.json` } },
         }).result;
         console.log("Upload Succeeded");
+        setIsUploading(false);
 
         await client.models.Job.update({
           id: jobId,
@@ -82,8 +83,8 @@ function App() {
         await pollTranscription(jobId);
       } catch (error) {
         console.log("Upload Error: ", error);
+        setIsUploading(false);
       }
-      setIsUploading(false);
     }
   };
 
@@ -181,12 +182,13 @@ function App() {
             </button>
           </div>
           <div className="upload-section">
+            <h2>Upload Audio</h2>
             <input id="audio-upload" type="file" onChange={handleChange} />
             <button onClick={uploadFile} disabled={isUploading}>
-              Upload
+              Upload & Transcribe
             </button>
           </div>
-          <h2>Transcription Jobs:</h2>
+          <h2>Transcription Jobs</h2>
           <ul>
             {jobs.map((job) => (
               <li key={job.id} className="job-item">
@@ -200,7 +202,7 @@ function App() {
             ))}
           </ul>
           <div>
-            <h2>Transcription:</h2>
+            <h2>Transcription</h2>
             <div className="transcription-container">
               <textarea value={transcription} readOnly rows={10} className="transcription-textarea" />
               <button onClick={() => navigator.clipboard.writeText(transcription)} className="copy-button" title="Copy to clipboard">
