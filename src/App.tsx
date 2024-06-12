@@ -181,34 +181,38 @@ function App() {
               <FaSignOutAlt />
             </button>
           </div>
-          <div className="upload-section">
+          <div className="container">
             <h2>Upload Audio</h2>
-            <input id="audio-upload" type="file" onChange={handleChange} />
-            <button onClick={uploadFile} disabled={isUploading}>
-              Upload & Transcribe
-            </button>
+            <div className="upload-section">
+              <input id="audio-upload" type="file" onChange={handleChange} />
+              <button onClick={uploadFile} disabled={isUploading}>
+                Upload & Transcribe
+              </button>
+            </div>
           </div>
-          <h2>Transcription Jobs</h2>
-          <ul>
-            {jobs.map((job) => (
-              <li key={job.id} className="job-item">
-                <span onClick={() => handleJobClick(job.id)} className="job-details">
-                  {job.fileName} - {job.status}
-                </span>
-                <button onClick={() => deleteJob(job.id, job.fileName)} className="delete-button">
-                  &#x1f5d1;
-                </button>
-              </li>
-            ))}
-          </ul>
-          <div>
-            <h2>Transcription</h2>
-            <div className="transcription-container">
-              <textarea value={transcription} readOnly rows={10} className="transcription-textarea" />
+          <div className="container">
+            <h2>Transcription Jobs</h2>
+            <ul>
+              {jobs.map((job) => (
+                <li key={job.id} className="job-item">
+                  <span onClick={() => handleJobClick(job.id)} className="job-details">
+                    {job.fileName} - {job.status}
+                  </span>
+                  <button onClick={() => deleteJob(job.id, job.fileName)} className="delete-button">
+                    &#x1f5d1;
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="container">
+            <div className="transcription-header">
+              <h2>Transcription</h2>
               <button onClick={() => navigator.clipboard.writeText(transcription)} className="copy-button" title="Copy to clipboard">
                 <FaClipboard />
               </button>
             </div>
+            <textarea value={transcription} readOnly rows={10} className="transcription-textarea" />
           </div>
         </main>
       )}
