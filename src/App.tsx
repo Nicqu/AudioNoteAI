@@ -217,9 +217,7 @@ function App() {
             <textarea value={transcription} readOnly rows={10} className="transcription-textarea" />
           </div>
           <footer className="footer">
-            <p>
-              Made for <span title="Margarita <3">🍸</span>
-            </p>
+            <p>Made for 🍸</p>
           </footer>
         </main>
       )}
