@@ -39,9 +39,7 @@ function App() {
 
   const checkJobStatuses = async (jobs: Job[]) => {
     for (const job of jobs) {
-      if (job.status === "Processing") {
-        await pollTranscription(job.id);
-      }
+      await pollTranscription(job.id);
     }
   };
 
@@ -138,6 +136,7 @@ function App() {
   };
 
   const handleJobClick = async (jobId: string) => {
+    setTranscription("Loading...");
     const transcriptionKey = `transcriptionFiles/${jobId}.json`;
     try {
       const downloadResult = await downloadData({
@@ -176,7 +175,10 @@ function App() {
       {({ signOut, user }) => (
         <main>
           <div className="header">
-            <h1>{user?.signInDetails?.loginId}'s Transcriptions</h1>
+            <div className="header-left">
+              <h1>Audio Note AI</h1>
+              <p style={{ marginTop: 0 }}>{user?.signInDetails?.loginId}'s Transcriptions</p>
+            </div>
             <button onClick={signOut} className="signout-button" title="Sign out">
               <FaSignOutAlt />
             </button>
@@ -215,7 +217,9 @@ function App() {
             <textarea value={transcription} readOnly rows={10} className="transcription-textarea" />
           </div>
           <footer className="footer">
-            <p>Made for 🍹</p>
+            <p>
+              Made for <span title="Margarita <3">🍸</span>
+            </p>
           </footer>
         </main>
       )}
