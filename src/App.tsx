@@ -48,11 +48,12 @@ function App() {
         if (selectedFile.type.startsWith("audio/")) {
           setTranscription("");
           try {
+            // Uploading
             const jobId = uuidv4();
+            console.log("Uploading");
             const newJob = { id: jobId, fileName: selectedFile.name, status: "Uploading" };
             await client.models.Job.create(newJob);
             setJobs((prevJobs) => [...prevJobs, newJob]);
-
             await uploadData({
               path: ({ identityId }) => `audioFiles/${identityId}/${selectedFile.name}`,
               data: selectedFile,
@@ -60,12 +61,14 @@ function App() {
             }).result;
             console.log("Upload Succeeded");
 
+            // Processing
             await client.models.Job.update({
               id: jobId,
               status: "Processing",
             });
             setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId ? { ...job, status: "Processing" } : job)));
 
+            // Polling
             await pollTranscription(jobId);
           } catch (error) {
             console.log("Upload Error: ", error);
