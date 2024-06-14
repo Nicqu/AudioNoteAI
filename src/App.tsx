@@ -80,7 +80,12 @@ function App() {
     }
   }, []);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "audio/*": [],
+    },
+  });
 
   const pollTranscription = async (jobId: string) => {
     const transcriptionKey = `transcriptionFiles/${jobId}.json`;
