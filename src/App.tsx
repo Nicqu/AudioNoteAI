@@ -98,7 +98,7 @@ function App() {
           path: transcriptionKey,
         }).result;
         if (downloadResult) {
-          console.log("Result: ", downloadResult);
+          //console.log("Result: ", downloadResult);
           const json = await downloadResult.body.text();
           const data = JSON.parse(json);
           const transcript = (data.results.transcripts as Array<{ transcript: string }>).map((t) => t.transcript).join(" ");
@@ -173,7 +173,7 @@ function App() {
           <div className="header">
             <div className="header-left">
               <h1>
-                <img src="logo.svg" alt="Logo" style={{ height: "25px", marginRight: "5px" }} />
+                <img src="logo.svg" alt="Logo" style={{ height: "30px", marginRight: "5px" }} />
                 Audio Note AI
               </h1>
               <p style={{ marginTop: 0 }}>{user?.signInDetails?.loginId}'s Transcriptions</p>
