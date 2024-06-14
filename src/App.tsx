@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Authenticator } from "@aws-amplify/ui-react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
@@ -6,6 +6,7 @@ import "@aws-amplify/ui-react/styles.css";
 import { uploadData, downloadData, remove } from "aws-amplify/storage";
 import { v4 as uuidv4 } from "uuid";
 import { FaSignOutAlt, FaClipboard } from "react-icons/fa";
+import { useDropzone } from "react-dropzone";
 
 const client = generateClient<Schema>();
 
@@ -17,8 +18,6 @@ type Job = {
 
 function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [file, setFile] = useState<File | undefined>();
-  const [isUploading, setIsUploading] = useState(false);
   const [transcription, setTranscription] = useState("");
 
   useEffect(() => {
@@ -43,48 +42,42 @@ function App() {
     }
   };
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      const selectedFile = event.target.files[0];
-      if (selectedFile.type.startsWith("audio/")) {
-        setFile(selectedFile);
-      } else {
-        alert("Please upload an audio file.");
-      }
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      acceptedFiles.forEach(async (selectedFile) => {
+        if (selectedFile.type.startsWith("audio/")) {
+          setTranscription("");
+          try {
+            const jobId = uuidv4();
+            const newJob = { id: jobId, fileName: selectedFile.name, status: "Uploading" };
+            await client.models.Job.create(newJob);
+            setJobs((prevJobs) => [...prevJobs, newJob]);
+
+            await uploadData({
+              path: ({ identityId }) => `audioFiles/${identityId}/${selectedFile.name}`,
+              data: selectedFile,
+              options: { metadata: { jobid: jobId, transcriptionkey: `transcriptionFiles/${jobId}.json` } },
+            }).result;
+            console.log("Upload Succeeded");
+
+            await client.models.Job.update({
+              id: jobId,
+              status: "Processing",
+            });
+            setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId ? { ...job, status: "Processing" } : job)));
+
+            await pollTranscription(jobId);
+          } catch (error) {
+            console.log("Upload Error: ", error);
+          }
+        } else {
+          alert("Please upload an audio file.");
+        }
+      });
     }
-  };
+  }, []);
 
-  const uploadFile = async () => {
-    if (file) {
-      setIsUploading(true);
-      setTranscription("");
-      try {
-        const jobId = uuidv4();
-        const newJob = { id: jobId, fileName: file.name, status: "Uploading" };
-        await client.models.Job.create(newJob);
-        setJobs((prevJobs) => [...prevJobs, newJob]);
-
-        await uploadData({
-          path: ({ identityId }) => `audioFiles/${identityId}/${file.name}`,
-          data: file,
-          options: { metadata: { jobid: jobId, transcriptionkey: `transcriptionFiles/${jobId}.json` } },
-        }).result;
-        console.log("Upload Succeeded");
-        setIsUploading(false);
-
-        await client.models.Job.update({
-          id: jobId,
-          status: "Processing",
-        });
-        setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId ? { ...job, status: "Processing" } : job)));
-
-        await pollTranscription(jobId);
-      } catch (error) {
-        console.log("Upload Error: ", error);
-        setIsUploading(false);
-      }
-    }
-  };
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
 
   const pollTranscription = async (jobId: string) => {
     const transcriptionKey = `transcriptionFiles/${jobId}.json`;
@@ -189,26 +182,28 @@ function App() {
           <div className="container">
             <h2>Upload Audio</h2>
             <div className="upload-section">
-              <input id="audio-upload" type="file" onChange={handleChange} />
-              <button onClick={uploadFile} disabled={isUploading}>
-                Upload & Transcribe
-              </button>
+              <div {...getRootProps({ className: "dropzone" })}>
+                <input {...getInputProps()} />
+                {isDragActive ? <p>Drop the files here ...</p> : <p>Drag 'n' drop an audio file here, or click to select one</p>}
+              </div>
             </div>
           </div>
           <div className="container">
             <h2>Transcription Jobs</h2>
-            <ul>
-              {jobs.map((job) => (
-                <li key={job.id} className="job-item">
-                  <span onClick={() => handleJobClick(job.id)} className="job-details">
-                    {job.fileName} - {job.status}
-                  </span>
-                  <button onClick={() => deleteJob(job.id, job.fileName)} className="delete-button">
-                    &#x1f5d1;
-                  </button>
-                </li>
-              ))}
-            </ul>
+            {jobs.length !== 0 && (
+              <ul>
+                {jobs.map((job) => (
+                  <li key={job.id} className="job-item">
+                    <span onClick={() => handleJobClick(job.id)} className="job-details">
+                      {job.fileName} - {job.status}
+                    </span>
+                    <button onClick={() => deleteJob(job.id, job.fileName)} className="delete-button" disabled={job.status === "Processing"}>
+                      &#x1f5d1;
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <div className="container">
             <div className="transcription-header">

@@ -30,6 +30,25 @@ main {
   word-break: break-word;
 }
 
+.dropzone {
+  border: 2px dashed #000000;
+  background-color: #ffffff;
+  color: #000;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: border 0.24s ease-in-out;
+}
+
+.dropzone.active {
+  border-color: #2196f3;
+}
+
+.dropzone p {
+  margin: 0;
+}
+
 .container {
   margin: 10px 0px;
   display: flex;
@@ -107,7 +126,8 @@ li {
   padding: 8px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: center;  
+  cursor: pointer;
 }
 
 li:hover {
