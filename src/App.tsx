@@ -176,7 +176,10 @@ function App() {
         <main>
           <div className="header">
             <div className="header-left">
-              <h1>Audio Note AI</h1>
+              <h1>
+                <img src="logo.svg" alt="Logo" style={{ height: "25px", marginRight: "5px" }} />
+                Audio Note AI
+              </h1>
               <p style={{ marginTop: 0 }}>{user?.signInDetails?.loginId}'s Transcriptions</p>
             </div>
             <button onClick={signOut} className="signout-button" title="Sign out">
