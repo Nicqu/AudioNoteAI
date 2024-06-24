@@ -130,9 +130,6 @@ li {
   align-items: center; 
 }
 
-li:hover {
-  background: #dadbf9;
-}
 
 .selected-job {
   background-color: #d3d3d3; /* Beispiel: Hellgrau als Highlight */

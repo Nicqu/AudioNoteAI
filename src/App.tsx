@@ -66,6 +66,7 @@ const JOB_STATUS = {
 function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const checkJobStatuses = useCallback(async (jobs: Job[]) => {
     for (const job of jobs) {
@@ -77,16 +78,21 @@ function App() {
 
   useEffect(() => {
     const fetchJobs = async () => {
-      const { data } = await client.models.Job.list();
-      const formattedJobs: Job[] = data.map((job) => ({
-        id: job.id!,
-        fileName: job.fileName!,
-        status: job.status!,
-        transcription: job.transcription!,
-        meetingNotes: job.meetingNotes!,
-      }));
-      setJobs(formattedJobs);
-      await checkJobStatuses(formattedJobs);
+      setLoading(true);
+      try {
+        const { data } = await client.models.Job.list();
+        const formattedJobs: Job[] = data.map((job) => ({
+          id: job.id!,
+          fileName: job.fileName!,
+          status: job.status!,
+          transcription: job.transcription!,
+          meetingNotes: job.meetingNotes!,
+        }));
+        setJobs(formattedJobs);
+        await checkJobStatuses(formattedJobs);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchJobs();
@@ -154,7 +160,7 @@ function App() {
     setSelectedJob((prevJob) => (prevJob?.id === job.id ? updatedJob : prevJob));
 
     const transcriptionKey = `transcriptionFiles/${job.id}.json`;
-    console.log("transcriptionKey: ", transcriptionKey);
+    //console.log("transcriptionKey: ", transcriptionKey);
 
     const maxAttempts = 50;
     const delay = 15000; // 15 seconds delay between attempts
@@ -175,7 +181,7 @@ function App() {
           setJobs((prevJobs) => prevJobs.map((j) => (j.id === job.id ? updatedJob : j)));
           setSelectedJob((prevJob) => (prevJob?.id === job.id ? updatedJob : prevJob));
 
-          console.log("Download Succeeded: ", transcriptionKey);
+          //console.log("Download Succeeded: ", transcriptionKey);
           return; // Exit the loop on success
         }
       } catch (error) {
@@ -193,7 +199,6 @@ function App() {
   };
 
   const handleJobClick = (job: Job) => {
-    console.log("Selected job: ", job);
     setSelectedJob(job);
   };
 
@@ -260,8 +265,6 @@ function App() {
         await client.models.Job.update(updatedJob);
         setJobs((prevJobs) => prevJobs.map((job) => (job.id === selectedJob.id ? updatedJob : job)));
         setSelectedJob(updatedJob);
-
-        console.log("Meeting Notes generated: ", data);
       }
     } catch (err) {
       let errorMessage = "An error occurred while generating notes";
@@ -305,25 +308,29 @@ function App() {
           </div>
           <div className="container">
             <h2>Audio Files</h2>
-            {jobs.length !== 0 && (
-              <ul>
-                {jobs.map((job) => (
-                  <li key={job.id} className={`job-item ${selectedJob?.id === job.id ? "selected-job" : ""}`}>
-                    <div className="job-details-container">
-                      <span className="job-details">
-                        {job.status == JOB_STATUS.PROCESSING && <img src="racoon-pedro.gif" alt="Processing" className="processing-gif" />}
-                        {job.fileName} - {job.status}
-                      </span>
-                    </div>
-                    <button onClick={() => handleJobClick(job)} disabled={job.status == JOB_STATUS.PROCESSING}>
-                      View
-                    </button>
-                    <button onClick={() => deleteJob(job)} className="delete-button" disabled={job.status == JOB_STATUS.PROCESSING}>
-                      &#x1f5d1;
-                    </button>
-                  </li>
-                ))}
-              </ul>
+            {loading ? (
+              <div className="loading-indicator">Loading...</div>
+            ) : (
+              jobs.length !== 0 && (
+                <ul>
+                  {jobs.map((job) => (
+                    <li key={job.id} className={`job-item ${selectedJob?.id === job.id ? "selected-job" : ""}`}>
+                      <div className="job-details-container">
+                        <span className="job-details">
+                          {job.status == JOB_STATUS.PROCESSING && <img src="racoon-pedro.gif" alt="Processing" className="processing-gif" />}
+                          {job.fileName} - {job.status}
+                        </span>
+                      </div>
+                      <button onClick={() => handleJobClick(job)} disabled={job.status == JOB_STATUS.PROCESSING}>
+                        View
+                      </button>
+                      <button onClick={() => deleteJob(job)} className="delete-button" disabled={job.status == JOB_STATUS.PROCESSING}>
+                        &#x1f5d1;
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )
             )}
           </div>
           <div className="container">
@@ -336,7 +343,11 @@ function App() {
             <textarea value={selectedJob?.transcription ?? ""} readOnly rows={10} className="transcription-textarea" />
           </div>
           <div className="container">
-            <button onClick={generateMeetingNotes} className="generate-notes-button">
+            <button
+              onClick={generateMeetingNotes}
+              className="generate-notes-button"
+              disabled={selectedJob?.status == JOB_STATUS.PROCESSING || (selectedJob?.meetingNotes?.length ?? 0) > 0}
+            >
               Generate Meeting Notes
             </button>
           </div>
