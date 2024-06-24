@@ -1,6 +1,7 @@
 import { type ClientSchema, a, defineData, defineFunction } from "@aws-amplify/backend";
 
-export const MODEL_ID = "anthropic.claude-instant-v1";
+export const MODEL_ID = "anthropic.claude-3-sonnet-20240229-v1:0";
+//export const MODEL_ID = "anthropic.claude-instant-v1";
 export const generateMeetingNoteFunction = defineFunction({
   entry: "./generateMeetingNote.ts",
   environment: {

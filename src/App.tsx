@@ -67,6 +67,14 @@ function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
+  const checkJobStatuses = useCallback(async (jobs: Job[]) => {
+    for (const job of jobs) {
+      if (job.status === JOB_STATUS.PROCESSING) {
+        await pollTranscription(job);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const fetchJobs = async () => {
       const { data } = await client.models.Job.list();
@@ -82,16 +90,7 @@ function App() {
     };
 
     fetchJobs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const checkJobStatuses = async (jobs: Job[]) => {
-    for (const job of jobs) {
-      if (job.status === JOB_STATUS.PROCESSING) {
-        await pollTranscription(job);
-      }
-    }
-  };
+  }, [checkJobStatuses]);
 
   function simplifyTranscription(transcription: TranscriptionResults): SimplifiedTranscription {
     const simplifiedItems = transcription.results.items.map((item) => {
