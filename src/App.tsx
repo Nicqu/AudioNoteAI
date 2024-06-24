@@ -20,6 +20,7 @@ interface Item {
   end_time?: string;
   alternatives: Alternative[];
   type: string;
+  speaker_label: string;
 }
 
 interface Transcript {
@@ -37,6 +38,15 @@ interface TranscriptionResults {
   results: Results;
   status: string;
 }
+
+type SimplifiedTranscriptItem = {
+  speaker_label?: string;
+  content: string;
+};
+
+type SimplifiedTranscription = {
+  items: SimplifiedTranscriptItem[];
+};
 
 type Job = {
   id: string;
@@ -80,6 +90,20 @@ function App() {
       await pollTranscription(job);
     }
   };
+
+  function simplifyTranscription(transcription: TranscriptionResults): SimplifiedTranscription {
+    const simplifiedItems = transcription.results.items.map((item) => {
+      const content = item.alternatives[0].content;
+      return {
+        speaker_label: item.speaker_label,
+        content,
+      };
+    });
+
+    return {
+      items: simplifiedItems,
+    };
+  }
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -211,7 +235,9 @@ function App() {
     setSelectedJob(updatedJob);
 
     try {
-      const item = JSON.stringify(selectedJob?.results?.results?.items);
+      const simplifiedTranscription = selectedJob?.results ? simplifyTranscription(selectedJob.results) : null;
+      console.log(simplifiedTranscription); //TODO: Remove this line
+      const item = JSON.stringify(simplifiedTranscription);
       if (!item) {
         throw new Error("No item found");
       }
