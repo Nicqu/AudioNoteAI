@@ -281,6 +281,12 @@ function App() {
     }
   };
 
+  const confirmDeleteJob = (job: Job) => {
+    if (window.confirm(`Are you sure you want to delete the job ${job.fileName}?`)) {
+      deleteJob(job);
+    }
+  };
+
   return (
     <Authenticator>
       {({ signOut, user }) => (
@@ -320,13 +326,15 @@ function App() {
                           {job.status == JOB_STATUS.PROCESSING && <img src="racoon-pedro.gif" alt="Processing" className="processing-gif" />}
                           {job.fileName} - {job.status}
                         </span>
+                        <div className="job-buttons">
+                          <button onClick={() => handleJobClick(job)} disabled={job.status == JOB_STATUS.PROCESSING} className="view-button">
+                            VIEW
+                          </button>
+                          <button onClick={() => confirmDeleteJob(job)} className="delete-button" disabled={job.status == JOB_STATUS.PROCESSING}>
+                            DELETE
+                          </button>
+                        </div>
                       </div>
-                      <button onClick={() => handleJobClick(job)} disabled={job.status == JOB_STATUS.PROCESSING}>
-                        View
-                      </button>
-                      <button onClick={() => deleteJob(job)} className="delete-button" disabled={job.status == JOB_STATUS.PROCESSING}>
-                        &#x1f5d1;
-                      </button>
                     </li>
                   ))}
                 </ul>

@@ -130,7 +130,6 @@ li {
   align-items: center; 
 }
 
-
 .selected-job {
   background-color: #d3d3d3; /* Beispiel: Hellgrau als Highlight */
 }
@@ -149,20 +148,34 @@ li {
 .job-details-container {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex: 1;
 }
 
-.job-item {
+.job-buttons {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 10px;
-  border-bottom: 1px solid #ccc;
 }
 
+.view-button {
+  background: none;
+  border: none;
+  color: black;
+  font-size: 1em;
+  cursor: pointer;
+  padding: 0.5em 1em;
+  transition: color 0.25s;
+}
+
+
 .delete-button {
-  margin-left: 10px;
+  background: none;
+  border: none;
   color: red;
+  font-size: 1em;
+  cursor: pointer;
+  padding: 0.5em 1em;
+  transition: color 0.25s;
 }
 
 .footer {
@@ -214,7 +227,7 @@ li {
 /* Mobile Responsiveness */
 @media (max-width: 900px) {
   main {
-    min-width: 100%; /* Auf mobilen Geräten die Breite 100% */
+    min-width: 100%; 
     padding: 15px;
   }
 
@@ -235,9 +248,6 @@ li {
     gap: 10px;
   }
 
-  .delete-button {
-    margin-left: 0;
-  }
 
   .transcription-textarea {
     font-size: 1em;
