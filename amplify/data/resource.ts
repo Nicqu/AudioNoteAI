@@ -16,7 +16,7 @@ const schema = a.schema({
       fileName: a.string(),
       status: a.string(),
       transcription: a.string(),
-      results: a.json(),
+      results: a.string(),
       meetingNotes: a.string(),
     })
     .authorization((allow) => [allow.owner()]),

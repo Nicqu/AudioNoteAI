@@ -53,7 +53,7 @@ type Job = {
   fileName: string;
   status: string;
   transcription?: string;
-  results?: TranscriptionResults;
+  results?: string;
   meetingNotes?: string;
 };
 
@@ -87,7 +87,9 @@ function App() {
 
   const checkJobStatuses = async (jobs: Job[]) => {
     for (const job of jobs) {
-      await pollTranscription(job);
+      if (job.status === JOB_STATUS.PROCESSING) {
+        await pollTranscription(job);
+      }
     }
   };
 
@@ -169,7 +171,7 @@ function App() {
           const transcript = data.results.transcripts.map((t) => t.transcript).join(" ");
 
           // Update the job with the transcription and results
-          const updatedJob = { ...job, status: JOB_STATUS.COMPLETED, transcription: transcript, results: data };
+          const updatedJob = { ...job, status: JOB_STATUS.COMPLETED, transcription: transcript, results: json };
           await client.models.Job.update(updatedJob);
           setJobs((prevJobs) => prevJobs.map((j) => (j.id === job.id ? updatedJob : j)));
           setSelectedJob((prevJob) => (prevJob?.id === job.id ? updatedJob : prevJob));
@@ -235,9 +237,10 @@ function App() {
     setSelectedJob(updatedJob);
 
     try {
-      const simplifiedTranscription = selectedJob?.results ? simplifyTranscription(selectedJob.results) : null;
-      console.log(simplifiedTranscription); //TODO: Remove this line
+      const transcriptionResults = JSON.parse(selectedJob?.results || "") as TranscriptionResults;
+      const simplifiedTranscription = selectedJob?.results ? simplifyTranscription(transcriptionResults) : null;
       const item = JSON.stringify(simplifiedTranscription);
+
       if (!item) {
         throw new Error("No item found");
       }
@@ -254,7 +257,6 @@ function App() {
       if (data) {
         // Update the job with the meeting notes
         updatedJob = { ...selectedJob, status: JOB_STATUS.COMPLETED, meetingNotes: data };
-
         await client.models.Job.update(updatedJob);
         setJobs((prevJobs) => prevJobs.map((job) => (job.id === selectedJob.id ? updatedJob : job)));
         setSelectedJob(updatedJob);
@@ -270,7 +272,7 @@ function App() {
       }
       console.log("Error generating meeting notes: ", errorMessage);
       alert("Error generating meeting notes: " + errorMessage);
-      updatedJob = { ...selectedJob, status: JOB_STATUS.COMPLETED, meetingNotes: "" };
+      updatedJob = { ...selectedJob, status: JOB_STATUS.FAILED, meetingNotes: "" };
       setJobs((prevJobs) => prevJobs.map((job) => (job.id === selectedJob.id ? updatedJob : job)));
       setSelectedJob(updatedJob);
     }
