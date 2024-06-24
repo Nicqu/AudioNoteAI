@@ -206,7 +206,7 @@ function App() {
     }
 
     // Set the job to "Generating" while the notes are being generated
-    let updatedJob = { ...selectedJob, meetingNotes: "Generating..." };
+    let updatedJob = { ...selectedJob, status: JOB_STATUS.PROCESSING, meetingNotes: "Generating..." };
     setJobs((prevJobs) => prevJobs.map((job) => (job.id === selectedJob.id ? updatedJob : job)));
     setSelectedJob(updatedJob);
 
@@ -227,7 +227,7 @@ function App() {
 
       if (data) {
         // Update the job with the meeting notes
-        updatedJob = { ...selectedJob, meetingNotes: data };
+        updatedJob = { ...selectedJob, status: JOB_STATUS.COMPLETED, meetingNotes: data };
 
         await client.models.Job.update(updatedJob);
         setJobs((prevJobs) => prevJobs.map((job) => (job.id === selectedJob.id ? updatedJob : job)));
@@ -243,7 +243,8 @@ function App() {
         errorMessage = err;
       }
       console.log("Error generating meeting notes: ", errorMessage);
-      updatedJob = { ...selectedJob, meetingNotes: "Error: " + errorMessage };
+      alert("Error generating meeting notes: " + errorMessage);
+      updatedJob = { ...selectedJob, status: JOB_STATUS.COMPLETED, meetingNotes: "" };
       setJobs((prevJobs) => prevJobs.map((job) => (job.id === selectedJob.id ? updatedJob : job)));
       setSelectedJob(updatedJob);
     }
