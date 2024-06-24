@@ -204,24 +204,24 @@ function App() {
       return;
     }
 
-    try {
-      // Set the job to "Generating" while the notes are being generated
-      let updatedJob = { ...selectedJob, meetingNotes: "Generating..." };
-      setJobs((prevJobs) => prevJobs.map((job) => (job.id === selectedJob.id ? updatedJob : job)));
-      setSelectedJob(updatedJob);
+    // Set the job to "Generating" while the notes are being generated
+    let updatedJob = { ...selectedJob, meetingNotes: "Generating..." };
+    setJobs((prevJobs) => prevJobs.map((job) => (job.id === selectedJob.id ? updatedJob : job)));
+    setSelectedJob(updatedJob);
 
+    try {
       const item = JSON.stringify(selectedJob?.results?.results?.items);
       if (!item) {
         throw new Error("No item found");
       }
-      console.log("Prompt: ", item); // TODO: Remove this line
 
       const { data, errors } = await client.queries.generateMeetingNote({
         prompt: item || "",
       });
 
       if (errors) {
-        throw new Error(errors.map((error) => error.message).join(", "));
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        throw new Error(errors.map((error: any) => error.message).join(", "));
       }
 
       if (data) {
@@ -234,8 +234,17 @@ function App() {
 
         console.log("Meeting Notes generated: ", data);
       }
-    } catch (error) {
-      console.log("Error generating meeting notes: ", error);
+    } catch (err) {
+      let errorMessage = "An error occurred while generating notes";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === "string") {
+        errorMessage = err;
+      }
+      console.log("Error generating meeting notes: ", errorMessage);
+      updatedJob = { ...selectedJob, meetingNotes: "Error: " + errorMessage };
+      setJobs((prevJobs) => prevJobs.map((job) => (job.id === selectedJob.id ? updatedJob : job)));
+      setSelectedJob(updatedJob);
     }
   };
 
