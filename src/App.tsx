@@ -192,7 +192,8 @@ function App() {
     console.log("Failed to retrieve transcription after maximum attempts.");
   };
 
-  const handleJobClick = async (job: Job) => {
+  const handleJobClick = (job: Job) => {
+    console.log("Selected job: ", job);
     setSelectedJob(job);
   };
 
@@ -308,12 +309,15 @@ function App() {
               <ul>
                 {jobs.map((job) => (
                   <li key={job.id} className={`job-item ${selectedJob?.id === job.id ? "selected-job" : ""}`}>
-                    <div className="job-details-container" onClick={() => handleJobClick(job)}>
+                    <div className="job-details-container">
                       <span className="job-details">
                         {job.status == JOB_STATUS.PROCESSING && <img src="racoon-pedro.gif" alt="Processing" className="processing-gif" />}
                         {job.fileName} - {job.status}
                       </span>
                     </div>
+                    <button onClick={() => handleJobClick(job)} disabled={job.status == JOB_STATUS.PROCESSING}>
+                      View
+                    </button>
                     <button onClick={() => deleteJob(job)} className="delete-button" disabled={job.status == JOB_STATUS.PROCESSING}>
                       &#x1f5d1;
                     </button>
