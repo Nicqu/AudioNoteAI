@@ -10,15 +10,52 @@ import { useDropzone } from "react-dropzone";
 
 const client = generateClient<Schema>();
 
+interface Alternative {
+  confidence: string;
+  content: string;
+}
+
+interface Item {
+  start_time?: string;
+  end_time?: string;
+  alternatives: Alternative[];
+  type: string;
+}
+
+interface Transcript {
+  transcript: string;
+}
+
+interface Results {
+  transcripts: Transcript[];
+  items: Item[];
+}
+
+interface TranscriptionResults {
+  jobName: string;
+  accountId: string;
+  results: Results;
+  status: string;
+}
+
 type Job = {
   id: string;
   fileName: string;
   status: string;
+  transcription?: string;
+  results?: TranscriptionResults;
+  meetingNotes?: string;
+};
+
+const JOB_STATUS = {
+  PROCESSING: "Processing",
+  COMPLETED: "Completed",
+  FAILED: "Failed",
 };
 
 function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [transcription, setTranscription] = useState("");
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -27,6 +64,8 @@ function App() {
         id: job.id!,
         fileName: job.fileName!,
         status: job.status!,
+        transcription: job.transcription!,
+        meetingNotes: job.meetingNotes!,
       }));
       setJobs(formattedJobs);
       await checkJobStatuses(formattedJobs);
@@ -38,22 +77,29 @@ function App() {
 
   const checkJobStatuses = async (jobs: Job[]) => {
     for (const job of jobs) {
-      await pollTranscription(job.id);
+      await pollTranscription(job);
     }
   };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
-      acceptedFiles.forEach(async (selectedFile) => {
-        if (selectedFile.type.startsWith("audio/")) {
-          setTranscription("");
-          try {
+      const audioFiles = acceptedFiles.filter((file) => file.type.startsWith("audio/"));
+
+      if (audioFiles.length === 0) {
+        alert("Please upload an audio file.");
+        return;
+      }
+
+      try {
+        await Promise.all(
+          audioFiles.map(async (selectedFile) => {
             // Uploading
             const jobId = uuidv4();
             console.log("Uploading");
             const newJob = { id: jobId, fileName: selectedFile.name, status: "Uploading" };
             await client.models.Job.create(newJob);
             setJobs((prevJobs) => [...prevJobs, newJob]);
+
             await uploadData({
               path: ({ identityId }) => `audioFiles/${identityId}/${selectedFile.name}`,
               data: selectedFile,
@@ -62,62 +108,49 @@ function App() {
             console.log("Upload Succeeded");
 
             // Processing
-            await client.models.Job.update({
-              id: jobId,
-              status: "Processing",
-            });
-            setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId ? { ...job, status: "Processing" } : job)));
+            const processingJob = { ...newJob, status: JOB_STATUS.PROCESSING };
+            await client.models.Job.update(processingJob);
+            setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId ? processingJob : job)));
 
             // Polling
-            await pollTranscription(jobId);
-          } catch (error) {
-            console.log("Upload Error: ", error);
-          }
-        } else {
-          alert("Please upload an audio file.");
-        }
-      });
+            await pollTranscription(processingJob);
+          })
+        );
+      } catch (error) {
+        console.log("Upload Error: ", error);
+      }
     }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    // accept: {
-    //   "audio/*": [],
-    // },
   });
 
-  const pollTranscription = async (jobId: string) => {
-    const transcriptionKey = `transcriptionFiles/${jobId}.json`;
+  const pollTranscription = async (job: Job) => {
+    const transcriptionKey = `transcriptionFiles/${job.id}.json`;
     console.log("transcriptionKey: ", transcriptionKey);
 
     const maxAttempts = 50;
     const delay = 15000; // 15 seconds delay between attempts
     let attempts = 0;
-    let success = false;
 
-    while (attempts < maxAttempts && !success) {
+    while (attempts < maxAttempts) {
       try {
         attempts++;
-        const downloadResult = await downloadData({
-          path: transcriptionKey,
-        }).result;
+        const downloadResult = await downloadData({ path: transcriptionKey }).result;
         if (downloadResult) {
-          //console.log("Result: ", downloadResult);
           const json = await downloadResult.body.text();
-          const data = JSON.parse(json);
-          const transcript = (data.results.transcripts as Array<{ transcript: string }>).map((t) => t.transcript).join(" ");
-          setTranscription(transcript);
-          success = true;
+          const data: TranscriptionResults = JSON.parse(json);
+          const transcript = data.results.transcripts.map((t) => t.transcript).join(" ");
 
-          await client.models.Job.update({
-            id: jobId,
-            status: "Completed",
-          });
-
-          setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId ? { ...job, status: "Completed" } : job)));
+          // Update the job with the transcription and results
+          const updatedJob = { ...job, status: JOB_STATUS.COMPLETED, transcription: transcript, results: data };
+          await client.models.Job.update(updatedJob);
+          setJobs((prevJobs) => prevJobs.map((j) => (j.id === job.id ? updatedJob : j)));
+          setSelectedJob((prevJob) => (prevJob?.id === job.id ? updatedJob : prevJob));
 
           console.log("Download Succeeded: ", transcriptionKey);
+          return; // Exit the loop on success
         }
       } catch (error) {
         console.log(`Attempt ${attempts} failed: `, error);
@@ -125,49 +158,84 @@ function App() {
       }
     }
 
-    if (!success) {
-      await client.models.Job.update({
-        id: jobId,
-        status: "Failed",
+    // If the loop completes without success, mark the job as failed
+    const failedJob = { ...job, status: JOB_STATUS.FAILED };
+    await client.models.Job.update(failedJob);
+    setJobs((prevJobs) => prevJobs.map((j) => (j.id === job.id ? failedJob : j)));
+
+    console.log("Failed to retrieve transcription after maximum attempts.");
+  };
+
+  const handleJobClick = async (job: Job) => {
+    setSelectedJob(job);
+  };
+
+  const deleteJob = async (job: Job) => {
+    try {
+      await client.models.Job.delete({ id: job.id });
+      setJobs((prevJobs) => prevJobs.filter((j) => j.id !== job.id));
+
+      if (selectedJob?.id === job.id) {
+        setSelectedJob(null);
+      }
+
+      await Promise.all([
+        remove({ path: ({ identityId }) => `audioFiles/${identityId}/${job.fileName}` }),
+        remove({ path: `transcriptionFiles/${job.id}.json` }),
+      ]);
+
+      console.log(`Successfully deleted job ${job.id}`);
+    } catch (error) {
+      console.log(`Error deleting job ${job.id}:`, error);
+    }
+  };
+
+  const generateMeetingNotes = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    console.log("Generating Meeting Notes");
+
+    if (!selectedJob) {
+      console.log("No job selected");
+      return;
+    }
+
+    if (selectedJob.meetingNotes) {
+      console.log("Meeting Notes already exist: ", selectedJob.meetingNotes);
+      return;
+    }
+
+    try {
+      // Set the job to "Generating" while the notes are being generated
+      let updatedJob = { ...selectedJob, meetingNotes: "Generating..." };
+      setJobs((prevJobs) => prevJobs.map((job) => (job.id === selectedJob.id ? updatedJob : job)));
+      setSelectedJob(updatedJob);
+
+      const item = JSON.stringify(selectedJob?.results?.results?.items);
+      if (!item) {
+        throw new Error("No item found");
+      }
+      console.log("Prompt: ", item); // TODO: Remove this line
+
+      const { data, errors } = await client.queries.generateMeetingNote({
+        prompt: item || "",
       });
 
-      setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId ? { ...job, status: "Failed" } : job)));
-      console.log("Failed to retrieve transcription after maximum attempts.");
-    }
-  };
+      if (errors) {
+        throw new Error(errors.map((error) => error.message).join(", "));
+      }
 
-  const handleJobClick = async (jobId: string) => {
-    setTranscription("Loading...");
-    const transcriptionKey = `transcriptionFiles/${jobId}.json`;
-    try {
-      const downloadResult = await downloadData({
-        path: transcriptionKey,
-      }).result;
-      if (downloadResult) {
-        const json = await downloadResult.body.text();
-        const data = JSON.parse(json);
-        const transcript = (data.results.transcripts as Array<{ transcript: string }>).map((t) => t.transcript).join(" ");
-        setTranscription(transcript);
-        console.log("Download Succeeded: ", transcriptionKey);
+      if (data) {
+        // Update the job with the meeting notes
+        updatedJob = { ...selectedJob, meetingNotes: data };
+
+        await client.models.Job.update(updatedJob);
+        setJobs((prevJobs) => prevJobs.map((job) => (job.id === selectedJob.id ? updatedJob : job)));
+        setSelectedJob(updatedJob);
+
+        console.log("Meeting Notes generated: ", data);
       }
     } catch (error) {
-      console.log("Error retrieving transcription: ", error);
-    }
-  };
-
-  const deleteJob = async (jobId: string, fileName: string) => {
-    try {
-      // Delete job from database
-      await client.models.Job.delete({ id: jobId });
-      setJobs((prevJobs) => prevJobs.filter((job) => job.id !== jobId));
-
-      // Delete audio file
-      await remove({ path: ({ identityId }) => `audioFiles/${identityId}/${fileName}` });
-
-      // Delete transcription file
-      await remove({ path: `transcriptionFiles/${jobId}.json` });
-    } catch (error) {
-      console.log(`Error deleting job ${jobId}:`, error);
+      console.log("Error generating meeting notes: ", error);
     }
   };
 
@@ -197,15 +265,18 @@ function App() {
             </div>
           </div>
           <div className="container">
-            <h2>Transcription Jobs</h2>
+            <h2>Audio Files</h2>
             {jobs.length !== 0 && (
               <ul>
                 {jobs.map((job) => (
-                  <li key={job.id} className="job-item">
-                    <span onClick={() => handleJobClick(job.id)} className="job-details">
-                      {job.fileName} - {job.status}
-                    </span>
-                    <button onClick={() => deleteJob(job.id, job.fileName)} className="delete-button" disabled={job.status === "Processing"}>
+                  <li key={job.id} className={`job-item ${selectedJob?.id === job.id ? "selected-job" : ""}`}>
+                    <div className="job-details-container" onClick={() => handleJobClick(job)}>
+                      <span className="job-details">
+                        {job.status == JOB_STATUS.PROCESSING && <img src="racoon-pedro.gif" alt="Processing" className="processing-gif" />}
+                        {job.fileName} - {job.status}
+                      </span>
+                    </div>
+                    <button onClick={() => deleteJob(job)} className="delete-button" disabled={job.status == JOB_STATUS.PROCESSING}>
                       &#x1f5d1;
                     </button>
                   </li>
@@ -216,11 +287,25 @@ function App() {
           <div className="container">
             <div className="transcription-header">
               <h2>Transcription</h2>
-              <button onClick={() => navigator.clipboard.writeText(transcription)} className="copy-button" title="Copy to clipboard">
+              <button onClick={() => navigator.clipboard.writeText(selectedJob?.transcription ?? "")} className="copy-button" title="Copy to clipboard">
                 <FaClipboard />
               </button>
             </div>
-            <textarea value={transcription} readOnly rows={10} className="transcription-textarea" />
+            <textarea value={selectedJob?.transcription ?? ""} readOnly rows={10} className="transcription-textarea" />
+          </div>
+          <div className="container">
+            <button onClick={generateMeetingNotes} className="generate-notes-button">
+              Generate Meeting Notes
+            </button>
+          </div>
+          <div className="container">
+            <div className="transcription-header">
+              <h2>Meeting Notes</h2>
+              <button onClick={() => navigator.clipboard.writeText(selectedJob?.meetingNotes ?? "")} className="copy-button" title="Copy to clipboard">
+                <FaClipboard />
+              </button>
+            </div>
+            <textarea value={selectedJob?.meetingNotes ?? ""} readOnly rows={10} className="transcription-textarea" />
           </div>
           <footer className="footer">
             <p>Made for 🍸</p>

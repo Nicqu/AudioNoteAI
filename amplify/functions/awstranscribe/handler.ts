@@ -43,7 +43,7 @@ export const handler: S3Handler = async (event: S3Event) => {
         },
         OutputBucketName: bucket,
         OutputKey: transcriptionKey,
-        Settings: {},
+        Settings: { ShowSpeakerLabels: true, MaxSpeakerLabels: 30 },
       };
 
       const data = await transcribe.startTranscriptionJob(params).promise();

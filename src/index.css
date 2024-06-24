@@ -4,7 +4,7 @@ body {
   display: flex;
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
   min-height: 100vh;
-  width: 100vw;
+  width: 95vw;
   justify-content: center;
   align-items: center;
 }
@@ -14,6 +14,7 @@ main {
   flex-direction: column;
   align-items: stretch;
   padding: 20px;
+  margin: 10px;
   box-sizing: border-box;
   max-width: 100%;
   min-width: 800px; /* Mindestbreite von 800px */
@@ -134,8 +135,33 @@ li:hover {
   background: #dadbf9;
 }
 
+.selected-job {
+  background-color: #d3d3d3; /* Beispiel: Hellgrau als Highlight */
+}
+
+.processing-gif {
+  width: 35px; /* Beispielwert, anpassbar nach Bedarf */
+  height: auto; /* Beibehaltung des Seitenverhältnisses */
+  margin-right: 10px; /* Beispielwert, anpassbar nach Bedarf */
+}
+
 .job-details {
+  display: flex;
+  align-items: center;
+}
+
+.job-details-container {
+  display: flex;
+  align-items: center;
   flex: 1;
+}
+
+.job-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #ccc;
 }
 
 .delete-button {
