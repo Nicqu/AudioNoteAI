@@ -6,7 +6,7 @@ export const generateMeetingNoteFunction = defineFunction({
   environment: {
     MODEL_ID,
   },
-  timeoutSeconds: 15,
+  timeoutSeconds: 120,
 });
 
 const schema = a.schema({
