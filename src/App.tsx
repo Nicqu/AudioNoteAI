@@ -107,13 +107,8 @@ function App() {
             }).result;
             console.log("Upload Succeeded");
 
-            // Processing
-            const processingJob = { ...newJob, status: JOB_STATUS.PROCESSING };
-            await client.models.Job.update(processingJob);
-            setJobs((prevJobs) => prevJobs.map((job) => (job.id === jobId ? processingJob : job)));
-
             // Polling
-            await pollTranscription(processingJob);
+            await pollTranscription(newJob);
           })
         );
       } catch (error) {
@@ -127,6 +122,12 @@ function App() {
   });
 
   const pollTranscription = async (job: Job) => {
+    // Processing
+    const updatedJob = { ...job, status: JOB_STATUS.PROCESSING };
+    await client.models.Job.update(updatedJob);
+    setJobs((prevJobs) => prevJobs.map((j) => (j.id === job.id ? updatedJob : j)));
+    setSelectedJob((prevJob) => (prevJob?.id === job.id ? updatedJob : prevJob));
+
     const transcriptionKey = `transcriptionFiles/${job.id}.json`;
     console.log("transcriptionKey: ", transcriptionKey);
 
