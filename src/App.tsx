@@ -55,6 +55,7 @@ type Job = {
   transcription?: string;
   results?: string;
   meetingNotes?: string;
+  createdAt?: string;
 };
 
 const JOB_STATUS = {
@@ -87,6 +88,7 @@ function App() {
           status: job.status!,
           transcription: job.transcription!,
           meetingNotes: job.meetingNotes!,
+          createdAt: job.createdAt!,
         }));
         setJobs(formattedJobs);
         await checkJobStatuses(formattedJobs);
@@ -118,6 +120,15 @@ function App() {
 
       if (audioFiles.length === 0) {
         alert("Please upload an audio file.");
+        return;
+      }
+
+      // check if no more than 5 jobs created today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayJobs = jobs.filter((job) => new Date(job.createdAt || "") >= today);
+      if (todayJobs.length + audioFiles.length > 5) {
+        alert("You can only upload up to 5 files per day.");
         return;
       }
 
