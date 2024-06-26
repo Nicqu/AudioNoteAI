@@ -10,6 +10,14 @@ import { useDropzone } from "react-dropzone";
 
 const client = generateClient<Schema>();
 
+const MAX_DAILY_JOBS = 5;
+
+const JOB_STATUS = {
+  PROCESSING: "Processing",
+  COMPLETED: "Completed",
+  FAILED: "Failed",
+};
+
 interface Alternative {
   confidence: string;
   content: string;
@@ -56,19 +64,14 @@ type Job = {
   results?: string;
   meetingNotes?: string;
   deleted?: boolean;
-  createdAt?: string;
-};
-
-const JOB_STATUS = {
-  PROCESSING: "Processing",
-  COMPLETED: "Completed",
-  FAILED: "Failed",
+  createdAt?: Date;
 };
 
 function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
+  const [todayJobsCount, setTodayJobsCount] = useState(0);
 
   const checkJobStatuses = useCallback(async (jobs: Job[]) => {
     for (const job of jobs) {
@@ -77,6 +80,13 @@ function App() {
       }
     }
   }, []);
+
+  const updateTodayJobsCount = useCallback(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayJobs = jobs.filter((job) => new Date(job.createdAt || "") >= today);
+    setTodayJobsCount(todayJobs.length);
+  }, [jobs]);
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -90,10 +100,9 @@ function App() {
           transcription: job.transcription!,
           meetingNotes: job.meetingNotes!,
           deleted: job.deleted!,
-          createdAt: job.createdAt!,
+          createdAt: new Date(job.createdAt!),
         }));
         setJobs(formattedJobs);
-        console.log("Jobs: ", formattedJobs);
         await checkJobStatuses(formattedJobs);
       } finally {
         setLoading(false);
@@ -103,7 +112,11 @@ function App() {
     fetchJobs();
   }, [checkJobStatuses]);
 
-  function simplifyTranscription(transcription: TranscriptionResults): SimplifiedTranscription {
+  useEffect(() => {
+    updateTodayJobsCount();
+  }, [jobs, updateTodayJobsCount]);
+
+  const simplifyTranscription = (transcription: TranscriptionResults): SimplifiedTranscription => {
     const simplifiedItems = transcription.results.items.map((item) => {
       const content = item.alternatives[0].content;
       return {
@@ -115,7 +128,7 @@ function App() {
     return {
       items: simplifiedItems,
     };
-  }
+  };
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -128,10 +141,7 @@ function App() {
         }
 
         // check if no more than 5 jobs created today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const todayJobs = jobs.filter((job) => new Date(job.createdAt || "") >= today);
-        if (todayJobs.length + audioFiles.length > 5) {
+        if (todayJobsCount + audioFiles.length > MAX_DAILY_JOBS) {
           alert("You can only upload up to 5 files per day.");
           return;
         }
@@ -142,7 +152,7 @@ function App() {
               // Uploading
               const jobId = uuidv4();
               console.log("Uploading");
-              const newJob = { id: jobId, fileName: selectedFile.name, status: "Uploading" };
+              const newJob = { id: jobId, fileName: selectedFile.name, status: "Uploading", createdAt: new Date() };
               await client.models.Job.create(newJob);
               setJobs((prevJobs) => [...prevJobs, newJob]);
 
@@ -162,11 +172,12 @@ function App() {
         }
       }
     },
-    [jobs]
+    [todayJobsCount]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    maxSize: 50_000_000, // 50 MB
   });
 
   const pollTranscription = async (job: Job) => {
@@ -325,8 +336,19 @@ function App() {
             <div className="upload-section">
               <div {...getRootProps({ className: "dropzone" })}>
                 <input {...getInputProps()} />
-                {isDragActive ? <p>Drop the files here ...</p> : <p>Drag 'n' drop an audio file here, or click to select one</p>}
+                {isDragActive ? (
+                  <p>Drop the files here ...</p>
+                ) : (
+                  <p>
+                    Drag 'n' drop an audio file here, or click to select one.
+                    <br />
+                    Maximum file size 50MB.
+                  </p>
+                )}
               </div>
+              <p style={{ margin: 0 }}>
+                Daily Limit: {todayJobsCount} / {MAX_DAILY_JOBS}
+              </p>
             </div>
           </div>
           <div className="container">
@@ -341,15 +363,18 @@ function App() {
                     .map((job) => (
                       <li key={job.id} className={`job-item ${selectedJob?.id === job.id ? "selected-job" : ""}`}>
                         <div className="job-details-container">
-                          <span className="job-details">
-                            {job.status == JOB_STATUS.PROCESSING && <img src="racoon-pedro.gif" alt="Processing" className="processing-gif" />}
-                            {job.fileName} - {job.status}
-                          </span>
+                          <div className="job-details">
+                            {job.status === JOB_STATUS.PROCESSING && <img src="racoon-pedro.gif" alt="Processing" className="processing-gif" />}
+                            <span>
+                              [{job.status}] {job.fileName}
+                            </span>
+                            <div className="job-createdAt">{new Date(job?.createdAt ?? new Date()).toLocaleString()}</div>
+                          </div>
                           <div className="job-buttons">
-                            <button onClick={() => handleJobClick(job)} disabled={job.status == JOB_STATUS.PROCESSING} className="view-button">
+                            <button onClick={() => handleJobClick(job)} disabled={job.status === JOB_STATUS.PROCESSING} className="view-button">
                               VIEW
                             </button>
-                            <button onClick={() => confirmDeleteJob(job)} className="delete-button" disabled={job.status == JOB_STATUS.PROCESSING}>
+                            <button onClick={() => confirmDeleteJob(job)} className="delete-button" disabled={job.status === JOB_STATUS.PROCESSING}>
                               DELETE
                             </button>
                           </div>

@@ -145,6 +145,20 @@ li {
   align-items: center;
 }
 
+.job-createdAt {
+  display: block; /* Stellt sicher, dass das Datum in einer neuen Zeile angezeigt wird */
+  font-size: 0.9em; /* Kleinere Schriftgröße für das Datum */
+  color: gray; /* Beispielhafte Farbe für das Datum */
+  margin-top: 5px; /* Abstand über dem Datum */
+}
+
+.job-details {
+  display: flex;
+  flex-direction: column; /* Stellt sicher, dass der Inhalt in einer Spalte angezeigt wird */
+  align-items: flex-start; /* Richtet den Inhalt links aus */
+}
+
+
 .job-details-container {
   display: flex;
   align-items: center;
