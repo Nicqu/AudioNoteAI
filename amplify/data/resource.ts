@@ -19,6 +19,7 @@ const schema = a.schema({
       transcription: a.string(),
       results: a.string(),
       meetingNotes: a.string(),
+      deleted: a.boolean(),
     })
     .authorization((allow) => [allow.owner()]),
   generateMeetingNote: a

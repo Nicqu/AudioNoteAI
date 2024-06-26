@@ -157,6 +157,13 @@ li {
   align-items: center;
 }
 
+.job-button:disabled {
+  border: none; 
+  background: none;
+  color: gray; 
+  cursor: not-allowed; 
+}
+
 .view-button {
   background: none;
   border: none;
@@ -167,6 +174,12 @@ li {
   transition: color 0.25s;
 }
 
+.view-button:disabled {
+  border: none; 
+  background: none;
+  color: gray; 
+  cursor: not-allowed; 
+}
 
 .delete-button {
   background: none;
@@ -176,6 +189,13 @@ li {
   cursor: pointer;
   padding: 0.5em 1em;
   transition: color 0.25s;
+}
+
+.delete-button:disabled {
+  background: none;
+  border: none;
+  color: lightcoral;
+  cursor: not-allowed; 
 }
 
 .footer {

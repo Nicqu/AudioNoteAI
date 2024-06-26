@@ -55,6 +55,7 @@ type Job = {
   transcription?: string;
   results?: string;
   meetingNotes?: string;
+  deleted?: boolean;
   createdAt?: string;
 };
 
@@ -88,9 +89,11 @@ function App() {
           status: job.status!,
           transcription: job.transcription!,
           meetingNotes: job.meetingNotes!,
+          deleted: job.deleted!,
           createdAt: job.createdAt!,
         }));
         setJobs(formattedJobs);
+        console.log("Jobs: ", formattedJobs);
         await checkJobStatuses(formattedJobs);
       } finally {
         setLoading(false);
@@ -114,50 +117,53 @@ function App() {
     };
   }
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      const audioFiles = acceptedFiles.filter((file) => file.type.startsWith("audio/"));
+  const onDrop = useCallback(
+    async (acceptedFiles: File[]) => {
+      if (acceptedFiles.length > 0) {
+        const audioFiles = acceptedFiles.filter((file) => file.type.startsWith("audio/"));
 
-      if (audioFiles.length === 0) {
-        alert("Please upload an audio file.");
-        return;
+        if (audioFiles.length === 0) {
+          alert("Please upload an audio file.");
+          return;
+        }
+
+        // check if no more than 5 jobs created today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayJobs = jobs.filter((job) => new Date(job.createdAt || "") >= today);
+        if (todayJobs.length + audioFiles.length > 5) {
+          alert("You can only upload up to 5 files per day.");
+          return;
+        }
+
+        try {
+          await Promise.all(
+            audioFiles.map(async (selectedFile) => {
+              // Uploading
+              const jobId = uuidv4();
+              console.log("Uploading");
+              const newJob = { id: jobId, fileName: selectedFile.name, status: "Uploading" };
+              await client.models.Job.create(newJob);
+              setJobs((prevJobs) => [...prevJobs, newJob]);
+
+              await uploadData({
+                path: ({ identityId }) => `audioFiles/${identityId}/${selectedFile.name}`,
+                data: selectedFile,
+                options: { metadata: { jobid: jobId, transcriptionkey: `transcriptionFiles/${jobId}.json` } },
+              }).result;
+              console.log("Upload Succeeded");
+
+              // Polling
+              await pollTranscription(newJob);
+            })
+          );
+        } catch (error) {
+          console.log("Upload Error: ", error);
+        }
       }
-
-      // check if no more than 5 jobs created today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayJobs = jobs.filter((job) => new Date(job.createdAt || "") >= today);
-      if (todayJobs.length + audioFiles.length > 5) {
-        alert("You can only upload up to 5 files per day.");
-        return;
-      }
-
-      try {
-        await Promise.all(
-          audioFiles.map(async (selectedFile) => {
-            // Uploading
-            const jobId = uuidv4();
-            console.log("Uploading");
-            const newJob = { id: jobId, fileName: selectedFile.name, status: "Uploading" };
-            await client.models.Job.create(newJob);
-            setJobs((prevJobs) => [...prevJobs, newJob]);
-
-            await uploadData({
-              path: ({ identityId }) => `audioFiles/${identityId}/${selectedFile.name}`,
-              data: selectedFile,
-              options: { metadata: { jobid: jobId, transcriptionkey: `transcriptionFiles/${jobId}.json` } },
-            }).result;
-            console.log("Upload Succeeded");
-
-            // Polling
-            await pollTranscription(newJob);
-          })
-        );
-      } catch (error) {
-        console.log("Upload Error: ", error);
-      }
-    }
-  }, []);
+    },
+    [jobs]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -215,7 +221,7 @@ function App() {
 
   const deleteJob = async (job: Job) => {
     try {
-      await client.models.Job.delete({ id: job.id });
+      await client.models.Job.update({ id: job.id, deleted: true });
       setJobs((prevJobs) => prevJobs.filter((j) => j.id !== job.id));
 
       if (selectedJob?.id === job.id) {
@@ -328,26 +334,28 @@ function App() {
             {loading ? (
               <div className="loading-indicator">Loading...</div>
             ) : (
-              jobs.length !== 0 && (
+              jobs.filter((job) => !job.deleted).length !== 0 && (
                 <ul>
-                  {jobs.map((job) => (
-                    <li key={job.id} className={`job-item ${selectedJob?.id === job.id ? "selected-job" : ""}`}>
-                      <div className="job-details-container">
-                        <span className="job-details">
-                          {job.status == JOB_STATUS.PROCESSING && <img src="racoon-pedro.gif" alt="Processing" className="processing-gif" />}
-                          {job.fileName} - {job.status}
-                        </span>
-                        <div className="job-buttons">
-                          <button onClick={() => handleJobClick(job)} disabled={job.status == JOB_STATUS.PROCESSING} className="view-button">
-                            VIEW
-                          </button>
-                          <button onClick={() => confirmDeleteJob(job)} className="delete-button" disabled={job.status == JOB_STATUS.PROCESSING}>
-                            DELETE
-                          </button>
+                  {jobs
+                    .filter((job) => !job.deleted)
+                    .map((job) => (
+                      <li key={job.id} className={`job-item ${selectedJob?.id === job.id ? "selected-job" : ""}`}>
+                        <div className="job-details-container">
+                          <span className="job-details">
+                            {job.status == JOB_STATUS.PROCESSING && <img src="racoon-pedro.gif" alt="Processing" className="processing-gif" />}
+                            {job.fileName} - {job.status}
+                          </span>
+                          <div className="job-buttons">
+                            <button onClick={() => handleJobClick(job)} disabled={job.status == JOB_STATUS.PROCESSING} className="view-button">
+                              VIEW
+                            </button>
+                            <button onClick={() => confirmDeleteJob(job)} className="delete-button" disabled={job.status == JOB_STATUS.PROCESSING}>
+                              DELETE
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    ))}
                 </ul>
               )
             )}
