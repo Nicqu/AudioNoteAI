@@ -1,6 +1,6 @@
 # AUDIO NOTE AI
 
-Welcome to the Audio Note AI repository! This project aims to provide a solution for transcribing audio notes into text using artificial intelligence.
+Welcome to the Audio Note AI repository! This project aims to provide a solution for transcribing audio notes into meeting notes using artificial intelligence.
 
 ## Overview
 
@@ -9,6 +9,7 @@ Audio Note AI is a powerful tool that utilizes machine learning algorithms to co
 ## Features
 
 - Transcribe audio notes into text
+- Generate Meeting Notes
 - Support for various audio formats
 - Accurate and reliable transcription results
 - User authentication and authorization
@@ -23,7 +24,7 @@ Use AWS Amplify.
 To deploy Audio Note AI locally, follow these steps:
 
 1. Make sure you have Node.js and npm installed on your machine.
-2. Navigate to the project directory: `/home/nico/git/nicqu/AudioNoteAI/`.
+2. Navigate to the project directory.
 3. Run the following command to start the development server:
 
 ```bash
