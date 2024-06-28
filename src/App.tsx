@@ -71,7 +71,7 @@ function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
-  const [todayJobsCount, setTodayJobsCount] = useState(0);
+  const [todayJobsCount, setTodayJobsCount] = useState(MAX_DAILY_JOBS);
 
   const checkJobStatuses = useCallback(async (jobs: Job[]) => {
     for (const job of jobs) {
