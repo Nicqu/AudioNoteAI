@@ -316,7 +316,7 @@ function App() {
   };
 
   return (
-    <Authenticator>
+    <Authenticator hideSignUp>
       {({ signOut, user }) => (
         <main>
           <div className="header">
