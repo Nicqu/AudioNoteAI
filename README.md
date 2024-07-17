@@ -29,7 +29,7 @@ To deploy Audio Note AI locally, follow these steps:
 
 ```bash
 npm run dev
-npx ampx sandbox --profile amplify-dev
+npx ampx sandbox --profile 851725442516_AdministratorAccess
 ```
 
 ## Security
