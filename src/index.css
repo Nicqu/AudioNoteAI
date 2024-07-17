@@ -258,6 +258,15 @@ li {
   color: #646cff;
 }
 
+.generate-notes-buttons {
+  flex-direction: row;
+  justify-content: space-evenly;
+}
+
+.generate-notes-button {
+  margin: 0 5px;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 900px) {
   main {
@@ -294,5 +303,14 @@ li {
 
   .copy-button {
     font-size: 1.2em;
+  }
+
+  .generate-notes-buttons {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .generate-notes-button {
+    margin: 5px 0;
   }
 }

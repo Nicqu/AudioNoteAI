@@ -5,6 +5,7 @@ import { generateClient } from "aws-amplify/data";
 import "@aws-amplify/ui-react/styles.css";
 import { uploadData, downloadData, remove } from "aws-amplify/storage";
 import { v4 as uuidv4 } from "uuid";
+import { GiProcessor } from "react-icons/gi";
 import { FaSignOutAlt, FaClipboard } from "react-icons/fa";
 import { useDropzone } from "react-dropzone";
 
@@ -250,7 +251,7 @@ function App() {
     }
   };
 
-  const generateMeetingNotes = async (e: React.MouseEvent<HTMLButtonElement>) => {
+  const generateMeetingNotes = async (e: React.MouseEvent<HTMLButtonElement>, speakerDetection: boolean) => {
     e.preventDefault();
     console.log("Generating Meeting Notes");
 
@@ -259,8 +260,8 @@ function App() {
       return;
     }
 
-    if (selectedJob.meetingNotes) {
-      console.log("Meeting Notes already exist: ", selectedJob.meetingNotes);
+    if (!selectedJob.transcription) {
+      console.log("No transcription text found");
       return;
     }
 
@@ -270,17 +271,19 @@ function App() {
     setSelectedJob(updatedJob);
 
     try {
-      const transcriptionResults = JSON.parse(selectedJob?.results || "") as TranscriptionResults;
-      const simplifiedTranscription = selectedJob?.results ? simplifyTranscription(transcriptionResults) : null;
-      const item = JSON.stringify(simplifiedTranscription);
+      let prompt = selectedJob.transcription;
 
-      if (!item) {
-        throw new Error("No item found");
+      // use technical transcription for advanced notes
+      if (speakerDetection) {
+        const transcriptionResults = JSON.parse(selectedJob?.results || "") as TranscriptionResults;
+        const simplifiedTranscription = selectedJob?.results ? simplifyTranscription(transcriptionResults) : null;
+        prompt = JSON.stringify(simplifiedTranscription);
+        if (!prompt) {
+          throw new Error("No item found");
+        }
       }
 
-      const { data, errors } = await client.queries.generateMeetingNote({
-        prompt: item || "",
-      });
+      const { data, errors } = await client.queries.generateMeetingNote({ prompt });
 
       if (errors) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -395,13 +398,22 @@ function App() {
             <textarea value={selectedJob?.transcription ?? ""} readOnly rows={10} className="transcription-textarea" />
           </div>
           <div className="container">
-            <button
-              onClick={generateMeetingNotes}
-              className="generate-notes-button"
-              disabled={selectedJob?.status == JOB_STATUS.PROCESSING || (selectedJob?.meetingNotes?.length ?? 0) > 0}
-            >
-              Generate Meeting Notes
-            </button>
+            <div className="generate-notes-buttons">
+              <button
+                onClick={(event) => generateMeetingNotes(event, false)}
+                className="generate-notes-button"
+                disabled={selectedJob?.status == JOB_STATUS.PROCESSING}
+              >
+                <GiProcessor /> Generate Meeting Notes
+              </button>
+              <button
+                onClick={(event) => generateMeetingNotes(event, true)}
+                className="generate-notes-button"
+                disabled={selectedJob?.status == JOB_STATUS.PROCESSING}
+              >
+                <GiProcessor /> Generate Advanced Meeting Notes (with Speaker detetcion)
+              </button>
+            </div>
           </div>
           <div className="container">
             <div className="transcription-header">
