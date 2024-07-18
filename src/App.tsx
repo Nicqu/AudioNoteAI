@@ -55,10 +55,6 @@ interface SimplifiedTranscriptItem {
   content: string;
 }
 
-interface SimplifiedTranscription {
-  items: SimplifiedTranscriptItem[];
-}
-
 function App() {
   const [jobs, setJobs] = useState<Schema["Job"]["type"][]>([]);
   const [selectedJob, setSelectedJob] = useState<Schema["Job"]["type"] | null>(null);
@@ -127,13 +123,13 @@ function App() {
    * Simplifies the transcription by combining consecutive words spoken by the same speaker.
    *
    * @param {TranscriptionResults} transcription - The original transcription results from the speech-to-text service.
-   * @returns {SimplifiedTranscription} - The simplified transcription with combined speaker content.
+   * @returns {string} - The simplified transcription with combined speaker content.
    *
    * The function processes the transcription results and combines consecutive words spoken by the same speaker into single items.
    * Each item in the simplified transcription contains the speaker's label and the combined content.
    * This reduces the number of items and provides a more readable transcription.
    */
-  const simplifyTranscription = (transcription: TranscriptionResults): SimplifiedTranscription => {
+  const simplifyTranscription = (transcription: TranscriptionResults): string => {
     const simplifiedItems: SimplifiedTranscriptItem[] = [];
     let currentSpeaker = "";
     let currentContent = "";
@@ -157,7 +153,8 @@ function App() {
       simplifiedItems.push({ speaker_label: currentSpeaker, content: currentContent });
     }
 
-    return { items: simplifiedItems };
+    // Convert simplifiedItems to a string
+    return JSON.stringify({ items: simplifiedItems });
   };
 
   const onDrop = useCallback(
@@ -218,7 +215,7 @@ function App() {
     try {
       const { data, errors } = await client.models.Job.update(job);
       if (errors || !data) {
-        throw new Error("Failed to update the job.");
+        throw new Error("Failed to update the job." + errors);
       }
 
       // Update the state
@@ -238,7 +235,6 @@ function App() {
     setSelectedJob((prevJob) => (prevJob?.id === job.id ? job : prevJob));
 
     const transcriptionKey = `transcriptionFiles/${job.id}.json`;
-    //console.log("transcriptionKey: ", transcriptionKey);
 
     const maxAttempts = 50;
     const delay = 15000; // 15 seconds delay between attempts
@@ -253,14 +249,16 @@ function App() {
           const jsonData: TranscriptionResults = JSON.parse(json);
           const transcript = jsonData.results.transcripts.map((t) => t.transcript).join(" ");
 
+          const transcriptionResults = JSON.parse(json) as TranscriptionResults;
+          const simplifiedTranscription = simplifyTranscription(transcriptionResults);
+
           // Update the job with the transcription and results
           job.status = JOB_STATUS.COMPLETED;
           job.transcription = transcript;
-          job.results = json;
+          job.results = simplifiedTranscription;
           await updateJob(job);
           setSelectedJob((prevJob) => (prevJob?.id === job.id ? job : prevJob));
 
-          //console.log("Download Succeeded: ", transcriptionKey);
           return; // Exit the loop on success
         }
       } catch (error) {
@@ -323,13 +321,8 @@ function App() {
       let prompt = selectedJob.transcription;
 
       // use technical transcription for advanced notes
-      if (speakerDetection) {
-        const transcriptionResults = JSON.parse(selectedJob?.results || "") as TranscriptionResults;
-        const simplifiedTranscription = selectedJob?.results ? simplifyTranscription(transcriptionResults) : null;
-        prompt = JSON.stringify(simplifiedTranscription);
-        if (!prompt) {
-          throw new Error("No item found");
-        }
+      if (speakerDetection && selectedJob.results) {
+        prompt = selectedJob.results;
       }
 
       const { data, errors } = await client.queries.generateMeetingNote({ prompt });
