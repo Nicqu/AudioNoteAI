@@ -13,7 +13,6 @@ export const generateMeetingNoteFunction = defineFunction({
 const schema = a.schema({
   Job: a
     .model({
-      id: a.string(),
       fileName: a.string(),
       status: a.string(),
       transcription: a.string(),
@@ -21,7 +20,7 @@ const schema = a.schema({
       meetingNotes: a.string(),
       deleted: a.boolean(),
     })
-    .authorization((allow) => [allow.owner()]),
+    .authorization((allow) => [allow.authenticated()]),
   generateMeetingNote: a
     .query()
     .arguments({ prompt: a.string().required() })
@@ -35,7 +34,6 @@ export const data = defineData({
   schema,
   authorizationModes: {
     defaultAuthorizationMode: "userPool",
-    // API Key is used for a.allow.public() rules
     apiKeyAuthorizationMode: {
       expiresInDays: 30,
     },

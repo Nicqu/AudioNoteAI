@@ -1,15 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Authenticator } from "@aws-amplify/ui-react";
-import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 import "@aws-amplify/ui-react/styles.css";
 import { uploadData, downloadData, remove } from "aws-amplify/storage";
-import { v4 as uuidv4 } from "uuid";
 import { GiProcessor } from "react-icons/gi";
 import { FaSignOutAlt, FaClipboard } from "react-icons/fa";
 import { useDropzone } from "react-dropzone";
 import { Hub } from "aws-amplify/utils";
 import { getCurrentUser } from "aws-amplify/auth";
+import type { Schema } from "../amplify/data/resource";
 
 const client = generateClient<Schema>();
 
@@ -19,6 +18,7 @@ const JOB_STATUS = {
   PROCESSING: "Processing",
   COMPLETED: "Completed",
   FAILED: "Failed",
+  UPLOADING: "Uploading",
 };
 
 interface Alternative {
@@ -50,34 +50,23 @@ interface TranscriptionResults {
   status: string;
 }
 
-type SimplifiedTranscriptItem = {
+interface SimplifiedTranscriptItem {
   speaker_label?: string;
   content: string;
-};
+}
 
-type SimplifiedTranscription = {
+interface SimplifiedTranscription {
   items: SimplifiedTranscriptItem[];
-};
-
-type Job = {
-  id: string;
-  fileName: string;
-  status: string;
-  transcription?: string;
-  results?: string;
-  meetingNotes?: string;
-  deleted?: boolean;
-  createdAt?: Date;
-};
+}
 
 function App() {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [jobs, setJobs] = useState<Schema["Job"]["type"][]>([]);
+  const [selectedJob, setSelectedJob] = useState<Schema["Job"]["type"] | null>(null);
   const [loading, setLoading] = useState(true);
   const [todayJobsCount, setTodayJobsCount] = useState(MAX_DAILY_JOBS);
   const [isUserSignedIn, setIsUserSignedIn] = useState(false);
 
-  const checkJobStatuses = useCallback(async (jobs: Job[]) => {
+  const checkJobStatuses = useCallback(async (jobs: Schema["Job"]["type"][]) => {
     for (const job of jobs) {
       if (job.status === JOB_STATUS.PROCESSING) {
         await pollTranscription(job);
@@ -109,17 +98,8 @@ function App() {
       setLoading(true);
       try {
         const { data } = await client.models.Job.list();
-        const formattedJobs: Job[] = data.map((job) => ({
-          id: job.id!,
-          fileName: job.fileName!,
-          status: job.status!,
-          transcription: job.transcription!,
-          meetingNotes: job.meetingNotes!,
-          deleted: job.deleted!,
-          createdAt: new Date(job.createdAt!),
-        }));
-        setJobs(formattedJobs);
-        await checkJobStatuses(formattedJobs);
+        setJobs(data);
+        await checkJobStatuses(data);
       } finally {
         setLoading(false);
       }
@@ -158,8 +138,6 @@ function App() {
     let currentSpeaker = "";
     let currentContent = "";
 
-    console.log("transcription.results.items: ", transcription.results.items);
-
     transcription.results.items.forEach((item) => {
       const content = item.alternatives[0].content;
 
@@ -178,7 +156,6 @@ function App() {
     if (currentSpeaker) {
       simplifiedItems.push({ speaker_label: currentSpeaker, content: currentContent });
     }
-    console.log("simplifiedItems: ", simplifiedItems);
 
     return { items: simplifiedItems };
   };
@@ -203,21 +180,24 @@ function App() {
           await Promise.all(
             audioFiles.map(async (selectedFile) => {
               // Uploading
-              const jobId = uuidv4();
               console.log("Uploading");
-              const newJob = { id: jobId, fileName: selectedFile.name, status: "Uploading", createdAt: new Date() };
-              await client.models.Job.create(newJob);
-              setJobs((prevJobs) => [...prevJobs, newJob]);
+              const { data, errors } = await client.models.Job.create({ fileName: selectedFile.name, status: JOB_STATUS.UPLOADING });
+              if (errors || !data) {
+                throw new Error("Failed to create the tender.");
+              }
+
+              // Update the state
+              setJobs((prevJobs) => [...prevJobs, data]);
 
               await uploadData({
                 path: ({ identityId }) => `audioFiles/${identityId}/${selectedFile.name}`,
                 data: selectedFile,
-                options: { metadata: { jobid: jobId, transcriptionkey: `transcriptionFiles/${jobId}.json` } },
+                options: { metadata: { jobid: data.id, transcriptionkey: `transcriptionFiles/${data.id}.json` } },
               }).result;
               console.log("Upload Succeeded");
 
               // Polling
-              await pollTranscription(newJob);
+              await pollTranscription(data);
             })
           );
         } catch (error) {
@@ -233,12 +213,29 @@ function App() {
     maxSize: 50_000_000, // 50 MB
   });
 
-  const pollTranscription = async (job: Job) => {
+  async function updateJob(job: Schema["Job"]["type"]): Promise<void> {
+    // Try updating the job
+    try {
+      const { data, errors } = await client.models.Job.update(job);
+      if (errors || !data) {
+        throw new Error("Failed to update the job.");
+      }
+
+      // Update the state
+      setJobs((prevJobs) => prevJobs.map((j) => (j.id === job.id ? job : j)));
+    } catch (error) {
+      console.error("Failed to update the job: ", error);
+    }
+  }
+
+  const pollTranscription = async (job: Schema["Job"]["type"]) => {
     // Processing
-    const updatedJob = { ...job, status: JOB_STATUS.PROCESSING };
-    await client.models.Job.update(updatedJob);
-    setJobs((prevJobs) => prevJobs.map((j) => (j.id === job.id ? updatedJob : j)));
-    setSelectedJob((prevJob) => (prevJob?.id === job.id ? updatedJob : prevJob));
+    job.status = JOB_STATUS.PROCESSING;
+
+    await updateJob(job);
+
+    // Update the state
+    setSelectedJob((prevJob) => (prevJob?.id === job.id ? job : prevJob));
 
     const transcriptionKey = `transcriptionFiles/${job.id}.json`;
     //console.log("transcriptionKey: ", transcriptionKey);
@@ -253,14 +250,15 @@ function App() {
         const downloadResult = await downloadData({ path: transcriptionKey }).result;
         if (downloadResult) {
           const json = await downloadResult.body.text();
-          const data: TranscriptionResults = JSON.parse(json);
-          const transcript = data.results.transcripts.map((t) => t.transcript).join(" ");
+          const jsonData: TranscriptionResults = JSON.parse(json);
+          const transcript = jsonData.results.transcripts.map((t) => t.transcript).join(" ");
 
           // Update the job with the transcription and results
-          const updatedJob = { ...job, status: JOB_STATUS.COMPLETED, transcription: transcript, results: json };
-          await client.models.Job.update(updatedJob);
-          setJobs((prevJobs) => prevJobs.map((j) => (j.id === job.id ? updatedJob : j)));
-          setSelectedJob((prevJob) => (prevJob?.id === job.id ? updatedJob : prevJob));
+          job.status = JOB_STATUS.COMPLETED;
+          job.transcription = transcript;
+          job.results = json;
+          await updateJob(job);
+          setSelectedJob((prevJob) => (prevJob?.id === job.id ? job : prevJob));
 
           //console.log("Download Succeeded: ", transcriptionKey);
           return; // Exit the loop on success
@@ -272,21 +270,20 @@ function App() {
     }
 
     // If the loop completes without success, mark the job as failed
-    const failedJob = { ...job, status: JOB_STATUS.FAILED };
-    await client.models.Job.update(failedJob);
-    setJobs((prevJobs) => prevJobs.map((j) => (j.id === job.id ? failedJob : j)));
+    job.status = JOB_STATUS.FAILED;
+    await updateJob(job);
 
     console.log("Failed to retrieve transcription after maximum attempts.");
   };
 
-  const handleJobClick = (job: Job) => {
+  const handleJobClick = (job: Schema["Job"]["type"]) => {
     setSelectedJob(job);
   };
 
-  const deleteJob = async (job: Job) => {
+  const deleteJob = async (job: Schema["Job"]["type"]) => {
     try {
-      await client.models.Job.update({ id: job.id, deleted: true });
-      setJobs((prevJobs) => prevJobs.filter((j) => j.id !== job.id));
+      job.deleted = true;
+      await updateJob(job);
 
       if (selectedJob?.id === job.id) {
         setSelectedJob(null);
@@ -345,8 +342,8 @@ function App() {
       if (data) {
         // Update the job with the meeting notes
         updatedJob = { ...selectedJob, status: JOB_STATUS.COMPLETED, meetingNotes: data };
-        await client.models.Job.update(updatedJob);
-        setJobs((prevJobs) => prevJobs.map((job) => (job.id === selectedJob.id ? updatedJob : job)));
+
+        await updateJob(updatedJob);
         setSelectedJob(updatedJob);
       }
     } catch (err) {
@@ -364,7 +361,7 @@ function App() {
     }
   };
 
-  const confirmDeleteJob = (job: Job) => {
+  const confirmDeleteJob = (job: Schema["Job"]["type"]) => {
     if (window.confirm(`Are you sure you want to delete the job ${job.fileName}?`)) {
       deleteJob(job);
     }
@@ -380,7 +377,7 @@ function App() {
                 <img src="logo.svg" alt="Logo" style={{ height: "30px", marginRight: "5px" }} />
                 Audio Note AI
               </h1>
-              <p style={{ marginTop: 0 }}>{user?.signInDetails?.loginId}'s Transcriptions</p>
+              <p style={{ marginTop: 0 }}>{user?.signInDetails?.loginId}&apos;s Transcriptions</p>
             </div>
             <button onClick={signOut} className="signout-button" title="Sign out">
               <FaSignOutAlt />
@@ -395,7 +392,7 @@ function App() {
                   <p>Drop the files here ...</p>
                 ) : (
                   <p>
-                    Drag 'n' drop an audio file here, or click to select one.
+                    Drag&apos;n drop an audio file here, or click to select one.
                     <br />
                     Maximum file size 50MB.
                   </p>
@@ -419,7 +416,9 @@ function App() {
                       <li key={job.id} className={`job-item ${selectedJob?.id === job.id ? "selected-job" : ""}`}>
                         <div className="job-details-container">
                           <div className="job-details">
-                            {job.status === JOB_STATUS.PROCESSING && <img src="racoon-pedro.gif" alt="Processing" className="processing-gif" />}
+                            {(job.status === JOB_STATUS.PROCESSING || job.status === JOB_STATUS.UPLOADING) && (
+                              <img src="racoon-pedro.gif" alt="Processing" className="processing-gif" />
+                            )}
                             <span>
                               [{job.status}] {job.fileName}
                             </span>

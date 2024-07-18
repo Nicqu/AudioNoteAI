@@ -7,7 +7,8 @@ import outputs from "../amplify_outputs.json";
 
 Amplify.configure(outputs);
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
+const rootContainer = document.getElementById("root") as HTMLElement;
+ReactDOM.createRoot(rootContainer).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
