@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Authenticator } from "@aws-amplify/ui-react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
@@ -50,16 +50,16 @@ interface TranscriptionResults {
   status: string;
 }
 
-type SimplifiedTranscriptItem = {
+interface SimplifiedTranscriptItem {
   speaker_label?: string;
   content: string;
-};
+}
 
-type SimplifiedTranscription = {
+interface SimplifiedTranscription {
   items: SimplifiedTranscriptItem[];
-};
+}
 
-type Job = {
+interface Job {
   id: string;
   fileName: string;
   status: string;
@@ -68,7 +68,7 @@ type Job = {
   meetingNotes?: string;
   deleted?: boolean;
   createdAt?: Date;
-};
+}
 
 function App() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -110,13 +110,13 @@ function App() {
       try {
         const { data } = await client.models.Job.list();
         const formattedJobs: Job[] = data.map((job) => ({
-          id: job.id!,
-          fileName: job.fileName!,
-          status: job.status!,
-          transcription: job.transcription!,
-          meetingNotes: job.meetingNotes!,
-          deleted: job.deleted!,
-          createdAt: new Date(job.createdAt!),
+          id: job.id,
+          fileName: job.fileName || "",
+          status: job.status || "",
+          transcription: job.transcription || "",
+          meetingNotes: job.meetingNotes || "",
+          deleted: job.deleted || false,
+          createdAt: new Date(job.createdAt),
         }));
         setJobs(formattedJobs);
         await checkJobStatuses(formattedJobs);
@@ -158,8 +158,6 @@ function App() {
     let currentSpeaker = "";
     let currentContent = "";
 
-    console.log("transcription.results.items: ", transcription.results.items);
-
     transcription.results.items.forEach((item) => {
       const content = item.alternatives[0].content;
 
@@ -178,7 +176,6 @@ function App() {
     if (currentSpeaker) {
       simplifiedItems.push({ speaker_label: currentSpeaker, content: currentContent });
     }
-    console.log("simplifiedItems: ", simplifiedItems);
 
     return { items: simplifiedItems };
   };
@@ -380,7 +377,7 @@ function App() {
                 <img src="logo.svg" alt="Logo" style={{ height: "30px", marginRight: "5px" }} />
                 Audio Note AI
               </h1>
-              <p style={{ marginTop: 0 }}>{user?.signInDetails?.loginId}'s Transcriptions</p>
+              <p style={{ marginTop: 0 }}>{user?.signInDetails?.loginId}`&apos;`s Transcriptions</p>
             </div>
             <button onClick={signOut} className="signout-button" title="Sign out">
               <FaSignOutAlt />
@@ -395,7 +392,7 @@ function App() {
                   <p>Drop the files here ...</p>
                 ) : (
                   <p>
-                    Drag 'n' drop an audio file here, or click to select one.
+                    Drag`n drop an audio file here, or click to select one.
                     <br />
                     Maximum file size 50MB.
                   </p>

@@ -13,7 +13,7 @@ export const generateMeetingNoteFunction = defineFunction({
 const schema = a.schema({
   Job: a
     .model({
-      id: a.string(),
+      id: a.string().required(),
       fileName: a.string(),
       status: a.string(),
       transcription: a.string(),
