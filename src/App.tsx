@@ -12,7 +12,7 @@ import type { Schema } from "../amplify/data/resource";
 
 const client = generateClient<Schema>();
 
-const MAX_DAILY_JOBS = 15;
+const MAX_DAILY_JOBS = 5;
 
 const JOB_STATUS = {
   PROCESSING: "Processing",
@@ -416,7 +416,9 @@ function App() {
                       <li key={job.id} className={`job-item ${selectedJob?.id === job.id ? "selected-job" : ""}`}>
                         <div className="job-details-container">
                           <div className="job-details">
-                            {job.status === JOB_STATUS.PROCESSING && <img src="racoon-pedro.gif" alt="Processing" className="processing-gif" />}
+                            {(job.status === JOB_STATUS.PROCESSING || job.status === JOB_STATUS.UPLOADING) && (
+                              <img src="racoon-pedro.gif" alt="Processing" className="processing-gif" />
+                            )}
                             <span>
                               [{job.status}] {job.fileName}
                             </span>
