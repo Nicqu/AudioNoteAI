@@ -17,7 +17,7 @@ main {
   margin: 10px;
   box-sizing: border-box;
   max-width: 100%;
-  min-width: 800px; /* Mindestbreite von 800px */
+  min-width: 800px; 
   width: 100%;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 8px;
@@ -131,13 +131,13 @@ li {
 }
 
 .selected-job {
-  background-color: #d3d3d3; /* Beispiel: Hellgrau als Highlight */
+  background-color: #d3d3d3; 
 }
 
 .processing-gif {
-  width: 35px; /* Beispielwert, anpassbar nach Bedarf */
-  height: auto; /* Beibehaltung des Seitenverhältnisses */
-  margin-right: 10px; /* Beispielwert, anpassbar nach Bedarf */
+  width: 65px;
+  height: auto; 
+  margin-right: 10px; 
 }
 
 .job-details {
@@ -146,16 +146,16 @@ li {
 }
 
 .job-createdAt {
-  display: block; /* Stellt sicher, dass das Datum in einer neuen Zeile angezeigt wird */
-  font-size: 0.9em; /* Kleinere Schriftgröße für das Datum */
-  color: gray; /* Beispielhafte Farbe für das Datum */
-  margin-top: 5px; /* Abstand über dem Datum */
+  display: block; 
+  font-size: 0.9em; 
+  color: gray; 
+  margin-top: 5px; 
 }
 
 .job-details {
   display: flex;
-  flex-direction: column; /* Stellt sicher, dass der Inhalt in einer Spalte angezeigt wird */
-  align-items: flex-start; /* Richtet den Inhalt links aus */
+  flex-direction: column; 
+  align-items: flex-start; 
 }
 
 

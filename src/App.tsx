@@ -8,6 +8,8 @@ import { v4 as uuidv4 } from "uuid";
 import { GiProcessor } from "react-icons/gi";
 import { FaSignOutAlt, FaClipboard } from "react-icons/fa";
 import { useDropzone } from "react-dropzone";
+import { Hub } from "aws-amplify/utils";
+import { getCurrentUser } from "aws-amplify/auth";
 
 const client = generateClient<Schema>();
 
@@ -73,6 +75,7 @@ function App() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [loading, setLoading] = useState(true);
   const [todayJobsCount, setTodayJobsCount] = useState(MAX_DAILY_JOBS);
+  const [isUserSignedIn, setIsUserSignedIn] = useState(false);
 
   const checkJobStatuses = useCallback(async (jobs: Job[]) => {
     for (const job of jobs) {
@@ -90,7 +93,19 @@ function App() {
   }, [jobs]);
 
   useEffect(() => {
+    // Check if the user is already signed in when the component mounts
+    getCurrentUser()
+      .then(() => {
+        setIsUserSignedIn(true);
+      })
+      .catch(() => {
+        setIsUserSignedIn(false);
+      });
+  }, []);
+
+  useEffect(() => {
     const fetchJobs = async () => {
+      if (!isUserSignedIn) return;
       setLoading(true);
       try {
         const { data } = await client.models.Job.list();
@@ -111,24 +126,61 @@ function App() {
     };
 
     fetchJobs();
-  }, [checkJobStatuses]);
+  }, [checkJobStatuses, isUserSignedIn]);
 
   useEffect(() => {
     updateTodayJobsCount();
   }, [jobs, updateTodayJobsCount]);
 
+  Hub.listen("auth", ({ payload }) => {
+    switch (payload.event) {
+      case "signedIn":
+        setIsUserSignedIn(true);
+        break;
+      case "signedOut":
+        setIsUserSignedIn(false);
+        break;
+    }
+  });
+
+  /**
+   * Simplifies the transcription by combining consecutive words spoken by the same speaker.
+   *
+   * @param {TranscriptionResults} transcription - The original transcription results from the speech-to-text service.
+   * @returns {SimplifiedTranscription} - The simplified transcription with combined speaker content.
+   *
+   * The function processes the transcription results and combines consecutive words spoken by the same speaker into single items.
+   * Each item in the simplified transcription contains the speaker's label and the combined content.
+   * This reduces the number of items and provides a more readable transcription.
+   */
   const simplifyTranscription = (transcription: TranscriptionResults): SimplifiedTranscription => {
-    const simplifiedItems = transcription.results.items.map((item) => {
+    const simplifiedItems: SimplifiedTranscriptItem[] = [];
+    let currentSpeaker = "";
+    let currentContent = "";
+
+    console.log("transcription.results.items: ", transcription.results.items);
+
+    transcription.results.items.forEach((item) => {
       const content = item.alternatives[0].content;
-      return {
-        speaker_label: item.speaker_label,
-        content,
-      };
+
+      if (item.speaker_label === currentSpeaker) {
+        currentContent += " " + content;
+      } else {
+        if (currentSpeaker) {
+          simplifiedItems.push({ speaker_label: currentSpeaker, content: currentContent });
+        }
+        currentSpeaker = item.speaker_label;
+        currentContent = content;
+      }
     });
 
-    return {
-      items: simplifiedItems,
-    };
+    // Push the last speaker's content
+    if (currentSpeaker) {
+      simplifiedItems.push({ speaker_label: currentSpeaker, content: currentContent });
+    }
+    console.log("simplifiedItems: ", simplifiedItems);
+
+    return { items: simplifiedItems };
   };
 
   const onDrop = useCallback(
