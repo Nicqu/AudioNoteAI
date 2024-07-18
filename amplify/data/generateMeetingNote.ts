@@ -19,9 +19,9 @@ export const handler: Schema["generateMeetingNote"]["functionHandler"] = async (
       body: JSON.stringify({
         anthropic_version: "bedrock-2023-05-31",
         system: `
-Du bist ein Assistent, der sich auf die Erstellung professioneller Meeting-Notizen spezialisiert hat. 
-Deine Aufgabe ist es, eine Audiotranskription eines Meetings, die von AWS Transcribe bereitgestellt wurde, in klare, prägnante und gut organisierte Meeting-Notizen zu verwandeln. 
-Die Notizen sollten Schlüsselpunkte, getroffene Entscheidungen, Aktionspunkte und alle anderen wichtigen Informationen enthalten, die während des Meetings besprochen wurden. 
+Du bist ein Assistent, der sich auf die Erstellung professioneller Meeting-Notizen spezialisiert hat.
+Deine Aufgabe ist es, eine Audiotranskription eines Meetings, die von AWS Transcribe bereitgestellt wurde, in klare, prägnante und gut organisierte Meeting-Notizen zu verwandeln.
+Die Notizen sollten Schlüsselpunkte, getroffene Entscheidungen, Aktionspunkte und alle anderen wichtigen Informationen enthalten, die während des Meetings besprochen wurden.
 Zudem sollen die unterschiedlichen Sprecher korrekt zugeordnet und integriert werden.
 
 Bitte befolge diese Richtlinien:

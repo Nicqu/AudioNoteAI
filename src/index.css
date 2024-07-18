@@ -17,7 +17,7 @@ main {
   margin: 10px;
   box-sizing: border-box;
   max-width: 100%;
-  min-width: 800px; 
+  min-width: 800px;
   width: 100%;
   background: rgba(255, 255, 255, 0.8);
   border-radius: 8px;
@@ -127,17 +127,17 @@ li {
   padding: 8px;
   display: flex;
   justify-content: space-between;
-  align-items: center; 
+  align-items: center;
 }
 
 .selected-job {
-  background-color: #d3d3d3; 
+  background-color: #d3d3d3;
 }
 
 .processing-gif {
   width: 65px;
-  height: auto; 
-  margin-right: 10px; 
+  height: auto;
+  margin-right: 10px;
 }
 
 .job-details {
@@ -146,16 +146,16 @@ li {
 }
 
 .job-createdAt {
-  display: block; 
-  font-size: 0.9em; 
-  color: gray; 
-  margin-top: 5px; 
+  display: block;
+  font-size: 0.9em;
+  color: gray;
+  margin-top: 5px;
 }
 
 .job-details {
   display: flex;
-  flex-direction: column; 
-  align-items: flex-start; 
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 
@@ -172,10 +172,10 @@ li {
 }
 
 .job-button:disabled {
-  border: none; 
+  border: none;
   background: none;
-  color: gray; 
-  cursor: not-allowed; 
+  color: gray;
+  cursor: not-allowed;
 }
 
 .view-button {
@@ -189,10 +189,10 @@ li {
 }
 
 .view-button:disabled {
-  border: none; 
+  border: none;
   background: none;
-  color: gray; 
-  cursor: not-allowed; 
+  color: gray;
+  cursor: not-allowed;
 }
 
 .delete-button {
@@ -209,7 +209,7 @@ li {
   background: none;
   border: none;
   color: lightcoral;
-  cursor: not-allowed; 
+  cursor: not-allowed;
 }
 
 .footer {
@@ -270,7 +270,7 @@ li {
 /* Mobile Responsiveness */
 @media (max-width: 900px) {
   main {
-    min-width: 100%; 
+    min-width: 100%;
     padding: 15px;
   }
 
