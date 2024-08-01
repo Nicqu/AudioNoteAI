@@ -30,7 +30,7 @@
     "@types/react-dom": "^18.2.22",
     "@types/node": "^20.14.10",
     "@types/eslint__js": "^8.42.3",
-    "@types/aws-lambda": "^8.10.141",
+    "@types/aws-lambda": "^8.10.142",
     "@typescript-eslint/eslint-plugin": "^7.2.0",
     "@eslint/compat": "^1.1.1",
     "@typescript-eslint/parser": "^7.2.0",
